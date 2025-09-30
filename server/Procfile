@@ -1,0 +1,4 @@
+web: daphne -b 0.0.0.0 -p $PORT pecl.asgi:application
+worker: celery -A pecl worker --loglevel=INFO
+release: python manage.py migrate --noinput
+
