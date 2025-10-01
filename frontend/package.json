@@ -1,8 +1,8 @@
 {
   "name": "frontend",
   "private": true,
-  "packageManager": "pnpm@9",
-  "engines": { "node": ">=18 <23" },
+  "packageManager": "pnpm@9.12.3",
+  "engines": { "node": "22.x" }   // optional but quieter than ">=18 <23"
   "version": "0.0.0",
   "type": "module",
   "scripts": {
