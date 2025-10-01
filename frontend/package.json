@@ -2,7 +2,7 @@
   "name": "frontend",
   "private": true,
   "packageManager": "pnpm@9.12.3",
-  "engines": { "node": "22.x" }   // optional but quieter than ">=18 <23"
+  "engines": { "node": "22.x" },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
