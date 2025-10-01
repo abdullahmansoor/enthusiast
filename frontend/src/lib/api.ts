@@ -29,12 +29,58 @@ export type TaskHandle = {
 
 export class ApiClient {
   private readonly apiBase: string;
+  private csrfPrimed = false;
+
 
   constructor(private readonly authenticationProvider: AuthenticationProvider) {
     this.apiBase = import.meta.env.VITE_API_BASE;
   }
 
+  private async ensureCsrf(): Promise<void> {
+    if (this.csrfPrimed) return;
+    // This endpoint must exist on the API and set the csrftoken cookie
+    // e.g. Django view with @ensure_csrf_cookie returning 204
+    await fetch(`${this.apiBase}/api/auth/csrf/`, { credentials: 'include' });
+    this.csrfPrimed = true;
+  }
+
+  private getCookie(name: string): string | undefined {
+    return document.cookie
+      .split('; ')
+      .find(c => c.startsWith(name + '='))?.split('=')[1];
+  }
+
   async login(email: string, password: string): Promise<Token> {
+    await this.ensureCsrf();
+    const csrftoken = this.getCookie('csrftoken') ?? '';
+
+    const response = await fetch(`${this.apiBase}/api/auth/login`, {
+      method: 'POST',
+      credentials: 'include',                 // <-- send/receive cookies
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,             // <-- echo CSRF cookie
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      // Try to surface a helpful error
+      let detail = '';
+      try { detail = JSON.stringify(await response.json()); } catch {}
+      throw new Error(`Login failed: ${response.status} ${response.statusText} ${detail}`);
+    }
+
+    // If your API returns a token in JSON, keep this:
+    try {
+      const data = await response.json();
+      return data as Token;
+    } catch {
+      // If it’s session-only (no JSON body), return a dummy/tokenless object or adjust the return type
+      return { token: '' };
+    }
+  }
+  async login_old(email: string, password: string): Promise<Token> {
     const response = await fetch(`${this.apiBase}/api/auth/login`, {
       headers: {
         'Content-Type': 'application/json'

@@ -6,6 +6,7 @@ import account.views.service_accounts
 import account.views.users
 
 urlpatterns = [
+    path("api/auth/csrf/", csrf_cookie, name="csrf-cookie"),
     path("api/auth/login", account.views.login.LoginView.as_view(), name="login"),
     path("api/account", account.views.accounts.AccountView.as_view(), name="account"),
     path("api/users", account.views.users.UserListView.as_view(), name="user_list"),
