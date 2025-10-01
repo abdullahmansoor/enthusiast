@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "heroku-prebuild": "corepack enable && corepack prepare pnpm@9.12.3 --activate",
-    "heroku-postbuild": "pnpm install --include=dev --force --store-dir=/tmp/pnpmstore && pnpm build",
+    "heroku-postbuild": "pnpm build",
     "start": "pnpm dlx serve -s dist -l $PORT",
 
     "dev": "vite",
