@@ -1,1 +1,1 @@
-web: pnpm install --include=dev --force && pnpm build && pnpm dlx serve -s dist -l $PORT
+web: pnpm start
