@@ -50,7 +50,7 @@ export class ApiClient {
       .find(c => c.startsWith(name + '='))?.split('=')[1];
   }
 
-  async login(email: string, password: string): Promise<Token> {
+  async login_nw(email: string, password: string): Promise<Token> {
     await this.ensureCsrf();
     const csrftoken = this.getCookie('csrftoken') ?? '';
 
@@ -80,7 +80,7 @@ export class ApiClient {
       return { token: '' };
     }
   }
-  async login_old(email: string, password: string): Promise<Token> {
+  async login(email: string, password: string): Promise<Token> {
     const response = await fetch(`${this.apiBase}/api/auth/login`, {
       headers: {
         'Content-Type': 'application/json'
