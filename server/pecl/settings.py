@@ -145,6 +145,22 @@ DATABASES = {
     }
 }
 
+# ---- HTTPS & proxy (Heroku) ----
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Optional but recommended:
+SECURE_SSL_REDIRECT = True
+
+# ---- CSRF / CORS / Cookies (read from ECL_* envs, with safe defaults) ----
+CSRF_TRUSTED_ORIGINS = json.loads(os.environ.get("ECL_DJANGO_CSRF_TRUSTED_ORIGINS", default="[]"))
+CORS_ALLOWED_ORIGINS = json.loads(os.environ.get("ECL_DJANGO_CORS_ALLOWED_ORIGINS", default="[]"))
+CORS_ALLOW_CREDENTIALS = env.bool("ECL_CORS_ALLOW_CREDENTIALS", default=True)
+
+SESSION_COOKIE_SECURE = env.bool("ECL_SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE = env.bool("ECL_CSRF_COOKIE_SECURE", default=True)
+
+# Django expects strings: 'Lax' | 'Strict' | 'None'
+SESSION_COOKIE_SAMESITE = env.str("ECL_SESSION_COOKIE_SAMESITE", default="None")
+CSRF_COOKIE_SAMESITE   = env.str("ECL_CSRF_COOKIE_SAMESITE",   default="None")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
