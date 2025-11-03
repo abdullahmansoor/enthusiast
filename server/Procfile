@@ -1,2 +1,2 @@
 web: daphne -b 0.0.0.0 -p $PORT pecl.asgi:application
-worker: celery -A pecl worker --loglevel=INFO
+worker: celery -A pecl worker --loglevel=INFO --pool=solo --concurrency=1 --prefetch-multiplier=1 --max-tasks-per-child=50 --without-gossip --without-mingle
