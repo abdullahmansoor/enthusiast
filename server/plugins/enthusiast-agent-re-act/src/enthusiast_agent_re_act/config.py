@@ -11,7 +11,7 @@ from agent.core.agents import ToolCallingAgent
 def get_config() -> AgentConfigWithDefaults:
     return AgentConfigWithDefaults(
         chat_prompt_template=ChatPromptTemplateConfig(
-            [
+            messages=[
                 (
                     "system",
                     TEMPLATE_RE_ACT_PROMPT,
