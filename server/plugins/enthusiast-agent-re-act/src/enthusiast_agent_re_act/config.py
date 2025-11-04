@@ -1,6 +1,6 @@
 from enthusiast_common.config import AgentConfigWithDefaults, LLMToolConfig
-from langchain_core.prompts import ChatPromptTemplate
-#from enthusiast_common.config.base import ChatPromptTemplateConfig
+#from langchain_core.prompts import ChatPromptTemplate
+from enthusiast_common.config.base import ChatPromptTemplateConfig
 
 
 from .agent import BaseReActAgent
@@ -10,7 +10,7 @@ from agent.core.agents import ToolCallingAgent
 
 def get_config() -> AgentConfigWithDefaults:
     return AgentConfigWithDefaults(
-        chat_prompt_template=ChatPromptTemplate.from_messages(
+        chat_prompt_template=ChatPromptTemplateConfig(
             [
                 (
                     "system",
