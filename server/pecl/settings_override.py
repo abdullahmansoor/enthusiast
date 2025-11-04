@@ -9,5 +9,4 @@ AVAILABLE_AGENTS: dict[str, dict[str, str]] = {
         "name": "ReAct Agent",
         "agent_directory_path": "enthusiast_agent_re_act",
     },
-
 }
