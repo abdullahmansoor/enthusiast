@@ -1,9 +1,9 @@
 from enthusiast_common.config import AgentConfigWithDefaults, LLMToolConfig
 from langchain_core.prompts import ChatPromptTemplate
 
-from .tools.pdf_context_tool import ContextSearchTool
 from .agent import BaseReActAgent
 from .template_re_act_prompt import TEMPLATE_RE_ACT_PROMPT
+from agent.core.agents import ToolCallingAgent
 
 
 def get_config(conversation_id: int, streaming: bool) -> AgentConfigWithDefaults:
@@ -21,9 +21,5 @@ def get_config(conversation_id: int, streaming: bool) -> AgentConfigWithDefaults
             ]
         ),
         agent_class=BaseReActAgent,
-        llm_tools=[
-            LLMToolConfig(
-                tool_class=ContextSearchTool,
-            )
-        ],
+        tools=ToolCallingAgent.TOOLS,
     )
