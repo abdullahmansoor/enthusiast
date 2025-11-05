@@ -10,3 +10,14 @@ AVAILABLE_AGENTS: dict[str, dict[str, str]] = {
         "agent_directory_path": "enthusiast_agent_re_act",
     },
 }
+
+# server/pecl/settings.py
+CATALOG_PRODUCT_SOURCE_PLUGINS = {
+    "Sample Product Source": "enthusiast_source_sample.SampleProductSource",
+    "Dermlex Product Source": "enthusiast_source_dermlax.DermlaxProductSource",
+}
+
+CATALOG_DOCUMENT_SOURCE_PLUGINS = {
+    "Sample Document Source": "enthusiast_source_sample.SampleDocumentSource",
+    "Dermlax Document Source": "enthusiast_source_dermlax.DermlaxDocumentSource",
+}

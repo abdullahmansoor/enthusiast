@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "enthusiast-source-dermlax"
+version = "0.0.1"
+description = "A plugin for Enthusiast that provides a dermlax data source."
+authors = ["Abdullah Mansoor <abdullahmansoor@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+enthusiast-common = ">=1.3,<2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
