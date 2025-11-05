@@ -1,2 +1,2 @@
-from .document_source import SampleDocumentSource as SampleDocumentSource
-from .product_source import SampleProductSource as SampleProductSource
+from .document_source import DermlaxDocumentSource as DermlaxDocumentSource
+from .product_source import DermlaxProductSource as DermlaxProductSource
