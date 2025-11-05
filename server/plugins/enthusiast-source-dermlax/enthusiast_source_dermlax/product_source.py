@@ -78,6 +78,17 @@ class DermlaxProductSource(ProductSourcePlugin):
     def _val(row: Dict[str, str], key: str) -> str:
         return (row.get(key) or "").strip()
 
+    def _safe_price(self, row: Dict[str, str]) -> str:
+        """Return a valid numeric string or None if price is missing/invalid."""
+        raw = (row.get(self.CORE_MAP["price"]) or "").strip()
+        try:
+            if raw:
+                # Remove common formatting symbols (e.g. $)
+                return str(float(raw.replace("$", "").replace(",", "")))
+        except Exception:
+            pass
+        return None
+
     def _categories_from(self, row: Dict[str, str]) -> str:
         cats: list[str] = []
         base = self._val(row, self.CORE_MAP.get("categories", "Product Category"))
@@ -135,7 +146,12 @@ class DermlaxProductSource(ProductSourcePlugin):
             slug     = self._val(r, self.CORE_MAP["slug"])
             sku      = self._val(r, self.CORE_MAP["sku"]) or entry_id
             desc     = self._val(r, self.CORE_MAP["description"])
-            price    = self._val(r, self.CORE_MAP["price"])
+            #price    = self._val(r, self.CORE_MAP["price"])
+
+            price = self._safe_price(r)
+            if price is None:
+                # skip products with no valid price
+                continue            
             cats     = self._categories_from(r)
 
             props = {
