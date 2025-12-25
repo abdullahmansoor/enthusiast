@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import json
 import os
+import ssl
 import sys
 from pathlib import Path
 
@@ -231,6 +232,11 @@ SWAGGER_SETTINGS = {
 # CELERY
 CELERY_BROKER_URL = env.str("ECL_CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = env.str("ECL_CELERY_RESULT_BACKEND")
+
+if CELERY_BROKER_URL.startswith("rediss://"):
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+
 CELERY_TIMEZONE = env.str("ECL_CELERY_TIMEZONE")
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
