@@ -104,3 +104,9 @@ zstandard==0.23.0 ; python_version >= "3.10" and python_version < "4.0"
 -e ./plugins/enthusiast-source-shopify
 -e ./plugins/enthusiast-source-dermlax
 
+# Analytics dependencies for MVP
+detoxify>=0.5.1
+sentence-transformers>=2.2.2
+langdetect>=1.0.9
+drf-spectacular>=0.26.0
+scikit-learn>=1.3.0
