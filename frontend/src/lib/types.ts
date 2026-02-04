@@ -128,3 +128,77 @@ export type AgentDetails = {
   created_at: string;
   updated_at: string;
 };
+
+// Agent Builder Types (New MVP System)
+export type AgentBuilderModelConfig = {
+  provider: string;
+  name: string;
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+};
+
+export type AgentBuilderRetrievalConfig = {
+  enabled: boolean;
+  top_k?: number;
+  similarity_threshold?: number;
+  reranking_enabled?: boolean;
+};
+
+export type AgentBuilderConfig = {
+  model: AgentBuilderModelConfig;
+  system_prompt: string;
+  retrieval: AgentBuilderRetrievalConfig;
+  max_history_messages?: number;
+  enable_citations?: boolean;
+  custom_settings?: Record<string, any>;
+};
+
+export type AgentBuilderAgent = {
+  id: string; // UUID
+  name: string;
+  description: string;
+  dataset: number;
+  dataset_name?: string;
+  config: AgentBuilderConfig;
+  version: number;
+  status: 'draft' | 'published' | 'archived';
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  deleted_at: string | null;
+};
+
+export type AgentBuilderListItem = {
+  id: string;
+  name: string;
+  description: string;
+  status: 'draft' | 'published' | 'archived';
+  version: number;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+};
+
+export type AgentBuilderListResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: AgentBuilderListItem[];
+};
+
+export type AgentTestRequest = {
+  message: string;
+};
+
+export type AgentTestResponse = {
+  response: string;
+  conversation_id: string;
+  message_id: number;
+  metadata: {
+    model_used?: string;
+    retrieved_context?: any[];
+    processing_time?: number;
+  };
+};

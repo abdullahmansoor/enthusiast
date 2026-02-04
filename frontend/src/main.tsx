@@ -23,6 +23,7 @@ import { UsersIndex } from "@/pages/users";
 import { OnboardingIndex } from "@/pages/onboarding";
 import { NewChat } from "@/pages/data-sets/(id)/chat/new/(agent)/index.tsx";
 import AgentsPage from "@/pages/data-sets/(id)/agents";
+import { AgentBuilderPage } from "@/pages/agent-builder";
 
 const api = new ApiClient(authenticationProviderInstance);
 
@@ -121,6 +122,10 @@ const router = createBrowserRouter([
       {
         path: '/data-sets/:dataSetId/agents',
         element: <AgentsPage />
+      },
+      {
+        path: '/agent-builder',
+        element: <AgentBuilderPage />
       }
     ]
   },
