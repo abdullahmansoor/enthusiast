@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 CREATE_CONTENT_PROMPT_TEMPLATE = """
     You're supporting a sales agent or a customer support representative, in answering questions they get from the customers.
-    
+
     Based on the following documents delimited by three backticks
     ```
     {document_context}
@@ -24,8 +24,11 @@ CREATE_CONTENT_PROMPT_TEMPLATE = """
     respond to the following user request delimited by three backticks
     ```
     {query}
-    ``` 
+    ```
     Be concise and make sure that the response is to the point. Don't include unnecessary information.
+
+    IMPORTANT: If the documents and products are empty or don't contain relevant information to answer the query,
+    clearly state that you don't have information to answer this question based on the available knowledge base.
 """
 
 
@@ -100,6 +103,9 @@ class CreateAnswerTool(BaseLLMTool):
         relevant_documents = document_retriever.find_content_matching_query(full_user_request)
         relevant_products = product_retriever.find_products_matching_query(full_user_request)
 
+        # Log retrieval stats for debugging
+        logger.info(f"Retrieved {len(relevant_documents)} document chunks and {len(relevant_products)} products for query")
+
         product_context = serializers.serialize("json", relevant_products)
 
         prompt = PromptTemplate.from_template(CREATE_CONTENT_PROMPT_TEMPLATE)
@@ -111,6 +117,10 @@ class CreateAnswerTool(BaseLLMTool):
                 retry += 1
 
                 document_context = self._get_document_context(relevant_documents, retry)
+
+                # Log context sizes for debugging
+                if retry == 0:
+                    logger.info(f"Document context length: {len(document_context)} chars, Product context length: {len(product_context)} chars")
 
                 llm_result = chain.invoke(
                     {

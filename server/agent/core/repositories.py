@@ -70,8 +70,10 @@ class DjangoUserRepository(
 class DjangoDocumentChunkRepository(BaseDjangoRepository[DocumentChunk], BaseModelChunkRepository[DocumentChunk]):
     def get_chunk_by_distance_for_data_set(self, data_set_id: int, distance: CosineDistance) -> QuerySet[DocumentChunk]:
         embeddings_by_distance = self.model.objects.annotate(distance=distance).order_by("distance")
+        # Filter out chunks without embeddings to avoid retrieval failures
         embeddings_with_documents = embeddings_by_distance.select_related("document").filter(
-            document__data_set_id__exact=data_set_id
+            document__data_set_id__exact=data_set_id,
+            embedding__isnull=False
         )
         return embeddings_with_documents
 

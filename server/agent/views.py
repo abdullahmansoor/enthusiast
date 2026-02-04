@@ -100,7 +100,8 @@ class ConversationView(APIView):
         ),
     )
     def post(self, request, conversation_id):
-        conversation = get_object_or_404(Conversation, id=conversation_id)
+        # SECURITY: Verify conversation belongs to requesting user
+        conversation = get_object_or_404(Conversation, id=conversation_id, user=request.user)
         serializer = AskQuestionSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -318,11 +319,21 @@ class ConversationFileUploadView(APIView):
 
     @swagger_auto_schema(
         operation_description="Upload files to conversation.",
-        request_body=ConversationMultiFileUploadSerializer,
-        responses={200: ConversationFileSerializer(many=True)},
+        manual_parameters=[
+            openapi.Parameter(
+                "files",
+                openapi.IN_FORM,
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_FILE),
+                required=True,
+                description="Files to upload",
+            )
+        ],
+        responses={201: ConversationFileSerializer(many=True)},
     )
     def post(self, request, conversation_id, *args, **kwargs):
-        conversation = get_object_or_404(Conversation, pk=conversation_id)
+        # SECURITY: Verify conversation belongs to requesting user
+        conversation = get_object_or_404(Conversation, pk=conversation_id, user=request.user)
 
         serializer = ConversationMultiFileUploadSerializer(data=request.data, context={"conversation": conversation})
         serializer.is_valid(raise_exception=True)
