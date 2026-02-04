@@ -8,14 +8,21 @@ class AnalyticsConfig(AppConfig):
 
     def ready(self):
         """
-        Import evaluators when Django starts to register them.
-        This ensures all metrics are registered in the global registry.
+        Import evaluators and signals when Django starts.
+
+        This:
+        1. Registers all metrics in the global registry
+        2. Connects signals for automatic evaluation
         """
         try:
             # Import evaluators to register metrics
             from analytics.evaluators import rule_based  # noqa
             from analytics.evaluators import local_ml  # noqa
             from analytics.evaluators import llm_judges  # noqa
+
+            # Import signals to connect them
+            from analytics import signals  # noqa
+
         except ImportError:
             # During initial migrations, these modules may not be available yet
             pass
