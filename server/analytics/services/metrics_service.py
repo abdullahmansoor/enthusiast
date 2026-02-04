@@ -289,7 +289,8 @@ class MetricsService:
         self,
         start_date: date,
         end_date: date,
-        agent_id: Optional[str] = None
+        agent_id: Optional[str] = None,
+        agent_ids: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Get key performance indicators for dashboard.
@@ -297,20 +298,29 @@ class MetricsService:
         Args:
             start_date: Start date
             end_date: End date
-            agent_id: Optional agent filter
+            agent_id: Optional single agent filter
+            agent_ids: Optional list of agent IDs to filter
 
         Returns:
             Dict with KPI values and metadata
         """
-        cache_key = f"kpis:{start_date}:{end_date}:{agent_id or 'all'}"
+        # Normalize agent_id(s) to list
+        if agent_ids:
+            agent_filter = agent_ids
+        elif agent_id:
+            agent_filter = [agent_id]
+        else:
+            agent_filter = None
+
+        cache_key = f"kpis:{start_date}:{end_date}:{'-'.join(agent_filter) if agent_filter else 'all'}"
         cached = cache.get(cache_key)
         if cached:
             return cached
 
         # Build filters
         filters = Q(date__gte=start_date, date__lte=end_date)
-        if agent_id:
-            filters &= Q(agent_id=agent_id)
+        if agent_filter:
+            filters &= Q(agent_id__in=agent_filter)
 
         # Query metrics
         kpis = {
@@ -332,7 +342,7 @@ class MetricsService:
             'total_conversations': SessionMetric.objects.filter(
                 timestamp__gte=start_date,
                 timestamp__lte=end_date,
-                agent_id=agent_id if agent_id else F('agent_id')
+                agent_id__in=agent_filter if agent_filter else [F('agent_id')]
             ).values('conversation').distinct().count(),
             'date_range': {
                 'start': start_date.isoformat(),
@@ -502,3 +512,117 @@ class MetricsService:
             'total': total_count,
             'has_more': total_count > (offset + limit)
         }
+
+    def get_session_metrics(self, conversation_id: str) -> Dict[str, float]:
+        """
+        Get all metrics for a specific conversation.
+
+        Args:
+            conversation_id: Conversation UUID
+
+        Returns:
+            Dict mapping metric_name to value
+        """
+        metrics = SessionMetric.objects.filter(
+            conversation_id=conversation_id
+        ).values('metric_name', 'value')
+
+        return {m['metric_name']: m['value'] for m in metrics}
+
+    def get_turn_metrics(self, message_id: int) -> Dict[str, float]:
+        """
+        Get all metrics for a specific message.
+
+        Args:
+            message_id: Message ID
+
+        Returns:
+            Dict mapping metric_name to value
+        """
+        metrics = TurnMetric.objects.filter(
+            message_id=message_id
+        ).values('metric_name', 'value')
+
+        return {m['metric_name']: m['value'] for m in metrics}
+
+    def get_outliers(
+        self,
+        metric_name: str,
+        start_date: date,
+        end_date: date,
+        agent_id: Optional[str] = None,
+        threshold: float = 90,
+        direction: str = 'both',
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Get conversations that are outliers on a specific metric.
+
+        Args:
+            metric_name: Metric to analyze
+            start_date: Start date
+            end_date: End date
+            agent_id: Optional agent filter
+            threshold: Percentile threshold (e.g., 90 = top/bottom 10%)
+            direction: 'high', 'low', or 'both'
+            limit: Max results to return
+
+        Returns:
+            List of outlier conversations with metrics
+        """
+        # Build filters
+        filters = Q(
+            timestamp__gte=start_date,
+            timestamp__lte=end_date,
+            metric_name=metric_name
+        )
+        if agent_id:
+            filters &= Q(agent_id=agent_id)
+
+        # Get all values for percentile calculation
+        values = list(
+            SessionMetric.objects.filter(filters).values_list('value', flat=True)
+        )
+
+        if not values:
+            return []
+
+        # Calculate percentile thresholds
+        import numpy as np
+        high_threshold = np.percentile(values, threshold)
+        low_threshold = np.percentile(values, 100 - threshold)
+
+        # Get outlier conversations
+        outlier_filters = filters
+
+        if direction == 'high':
+            outlier_filters &= Q(value__gte=high_threshold)
+        elif direction == 'low':
+            outlier_filters &= Q(value__lte=low_threshold)
+        else:  # both
+            outlier_filters &= Q(value__gte=high_threshold) | Q(value__lte=low_threshold)
+
+        outliers = SessionMetric.objects.filter(
+            outlier_filters
+        ).select_related('conversation', 'conversation__agent').order_by('-value')[:limit]
+
+        results = []
+
+        for session_metric in outliers:
+            conv = session_metric.conversation
+            percentile = float(
+                (np.searchsorted(sorted(values), session_metric.value) / len(values)) * 100
+            )
+
+            results.append({
+                'conversation_id': str(conv.id),
+                'agent_id': str(conv.agent_id),
+                'agent_name': conv.agent.name,
+                'metric_name': metric_name,
+                'value': session_metric.value,
+                'percentile': percentile,
+                'created_at': conv.created_at,
+                'message_count': conv.messages.count()
+            })
+
+        return results

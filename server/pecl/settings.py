@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "agent",
     "account",
     "sync",
+    "analytics",
     "drf_yasg",
     "django_filters",
 ]
@@ -148,8 +149,8 @@ DATABASES = {
 
 # ---- HTTPS & proxy (Heroku) ----
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# Optional but recommended:
-SECURE_SSL_REDIRECT = True
+# SSL redirect: enabled in production, disabled in development
+SECURE_SSL_REDIRECT = env.bool("ECL_SECURE_SSL_REDIRECT", default=False)
 
 # ---- CSRF / CORS / Cookies (read from ECL_* envs, with safe defaults) ----
 CSRF_TRUSTED_ORIGINS = json.loads(os.environ.get("ECL_DJANGO_CSRF_TRUSTED_ORIGINS", default="[]"))
@@ -295,5 +296,29 @@ FILE_PARSER_CLASSES: dict[tuple[str] : str] = {
 }
 
 SERVICE_ACCOUNT_DOMAIN = env.str("SERVICE_ACCOUNT_DOMAIN", "enthusiast.internal")
+
+# Analytics Configuration
+ANALYTICS_CONFIG = {
+    # Enable/disable local ML models (Stage 2 evaluators)
+    # Set to False if you don't want to use Detoxify and Sentence-BERT
+    "enable_local_models": True,
+
+    # Enable/disable LLM judges (Stage 3 evaluators)
+    # Set to False to save on API costs
+    "enable_llm_judges": True,
+
+    # Sampling rate for LLM judges (0.0 to 1.0)
+    # Only evaluate this % of messages with LLM judges to control costs
+    "llm_sampling_rate": 0.1,
+
+    # Async evaluation (run via Celery)
+    # Set to False for synchronous evaluation (useful for testing)
+    "async_evaluation": True,
+
+    # OpenAI configuration for LLM judges
+    "openai_api_key": env.str("OPENAI_API_KEY", ""),
+    "llm_judge_model": "gpt-4o-mini",
+    "llm_judge_temperature": 0.0,
+}
 
 from .settings_override import *  # noqa
