@@ -6,7 +6,7 @@ services:
       - POSTGRES_PASSWORD=enthusiast
       - POSTGRES_DB=enthusiast
     ports:
-      - "5432:5432"
+      - "5433:5432"
   redis:
     image: redis:latest
   frontend:
@@ -27,6 +27,11 @@ services:
       dockerfile: server/Dockerfile.development
     volumes:
       - ./server:/app
+      - ./plugins/enthusiast-common/enthusiast_common:/usr/local/lib/python3.12/site-packages/enthusiast_common
+      - ./server/plugins/enthusiast-source-dermlax/enthusiast_source_dermlax:/usr/local/lib/python3.12/site-packages/enthusiast_source_dermlax
+      - ./plugins/enthusiast-source-sample/enthusiast_source_sample:/usr/local/lib/python3.12/site-packages/enthusiast_source_sample
+      - ./plugins/enthusiast-model-openai/enthusiast_model_openai:/usr/local/lib/python3.12/site-packages/enthusiast_model_openai
+      - ./server/plugins/enthusiast-source-custom/enthusiast_source_custom:/usr/local/lib/python3.12/site-packages/enthusiast_source_custom
     ports:
       - "10000:10000"
     env_file:
@@ -34,12 +39,25 @@ services:
     environment:
       - PORT=10000
       - RUN_MIGRATIONS=True
+    depends_on:
+      - postgres
+      - redis
   worker:
     build:
       context: .
       dockerfile: server/Dockerfile.development
+    volumes:
+      - ./server:/app
+      - ./plugins/enthusiast-common/enthusiast_common:/usr/local/lib/python3.12/site-packages/enthusiast_common
+      - ./server/plugins/enthusiast-source-dermlax/enthusiast_source_dermlax:/usr/local/lib/python3.12/site-packages/enthusiast_source_dermlax
+      - ./plugins/enthusiast-source-sample/enthusiast_source_sample:/usr/local/lib/python3.12/site-packages/enthusiast_source_sample
+      - ./plugins/enthusiast-model-openai/enthusiast_model_openai:/usr/local/lib/python3.12/site-packages/enthusiast_model_openai
+      - ./server/plugins/enthusiast-source-custom/enthusiast_source_custom:/usr/local/lib/python3.12/site-packages/enthusiast_source_custom
     env_file:
       - ./server/.env
     environment:
       - RUN_MIGRATIONS=False
       - RUN_WORKER=True
+    depends_on:
+      - postgres
+      - redis

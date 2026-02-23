@@ -40,7 +40,7 @@ export type UserResponse = {
 
 export class UsersApiClient extends BaseApiClient {
   async getUsers(page: number): Promise<PaginatedResult<User>> {
-    const response = await fetch(`${this.apiBase}/api/users?page=${page}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/users/?page=${page}`, this._requestConfiguration());
     const result = await response.json() as PaginatedResult<UserResponse>;
 
     return {
@@ -63,7 +63,7 @@ export class UsersApiClient extends BaseApiClient {
     };
 
     return await fetch(
-      `${this.apiBase}/api/users`,
+      `${this.apiBase}/api/users/`,
       {
         ...this._requestConfiguration(),
         method: "POST",
@@ -80,7 +80,7 @@ export class UsersApiClient extends BaseApiClient {
     };
 
     return await fetch(
-      `${this.apiBase}/api/users/${userId}`,
+      `${this.apiBase}/api/users/${userId}/`,
       {
         ...this._requestConfiguration(),
         method: "PATCH",
@@ -95,7 +95,7 @@ export class UsersApiClient extends BaseApiClient {
     };
 
     return await fetch(
-      `${this.apiBase}/api/users/${userId}/password`,
+      `${this.apiBase}/api/users/${userId}/password/`,
       {
         ...this._requestConfiguration(),
         method: "PUT",

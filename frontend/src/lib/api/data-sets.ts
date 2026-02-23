@@ -42,7 +42,7 @@ export type ConfigureDocumentSourcePayload = DocumentSourceResponse;
 
 export class DataSetsApiClient extends BaseApiClient {
   async getDataSets(): Promise<DataSet[]> {
-    const response = await fetch(`${this.apiBase}/api/data_sets`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/`, this._requestConfiguration());
     return (await response.json()).results as DataSet[];
   }
 
@@ -58,7 +58,7 @@ export class DataSetsApiClient extends BaseApiClient {
       system_message: dataSet.systemMessage
     }
 
-    const response = await fetch(`${this.apiBase}/api/data_sets`,
+    const response = await fetch(`${this.apiBase}/api/data_sets/`,
       {
         ...this._requestConfiguration(),
         body: JSON.stringify(body),
@@ -71,13 +71,13 @@ export class DataSetsApiClient extends BaseApiClient {
   }
 
   async getDataSetUsers(dataSetId: number): Promise<User[]> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/users`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/users/`, this._requestConfiguration());
     return (await response.json()).results as User[];
   }
 
   async addDataSetUser(dataSetId: number, userId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/users`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/users/`,
       {
         ...this._requestConfiguration(),
         method: "POST",
@@ -88,7 +88,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async removeDataSetUser(dataSetId: number, userId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/users/${userId}`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/users/${userId}/`,
       {
         ...this._requestConfiguration(),
         method: "DELETE"
@@ -104,7 +104,7 @@ export class DataSetsApiClient extends BaseApiClient {
       data_set_id: productSource.data_set_id
     }
 
-    const response = await fetch(`${this.apiBase}/api/data_sets/${productSource.data_set_id}/product_sources/${productSource.id}`,
+    const response = await fetch(`${this.apiBase}/api/data_sets/${productSource.data_set_id}/product_sources/${productSource.id}/`,
       {
         ...this._requestConfiguration(),
         body: JSON.stringify(body),
@@ -117,18 +117,18 @@ export class DataSetsApiClient extends BaseApiClient {
   }
 
   async getDataSetProductSource(dataSetId: number, productSourceId: number): Promise<CatalogSource> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${productSourceId}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${productSourceId}/`, this._requestConfiguration());
     return await response.json() as CatalogSource;
   }
 
   async getDataSetProductSources(dataSetId: number): Promise<CatalogSource[]> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/product_sources`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/product_sources/`, this._requestConfiguration());
     return (await response.json()).results as CatalogSource[];
   }
 
   async addDataSetProductSource(dataSetId: number, pluginName: string, config: object): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/`,
       {
         ...this._requestConfiguration(),
         method: "POST",
@@ -139,7 +139,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncAllProductSources(): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/product_sources/sync`,
+      `${this.apiBase}/api/product_sources/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -149,7 +149,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncDataSetProductSources(dataSetId: number | undefined): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/sync`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -159,7 +159,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncDataSetProductSource(dataSetId: number, pluginId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${pluginId}/sync`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${pluginId}/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -169,7 +169,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async removeDataSetProductSource(dataSetId: number, pluginId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${pluginId}`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/product_sources/${pluginId}/`,
       {
         ...this._requestConfiguration(),
         method: "DELETE"
@@ -185,7 +185,7 @@ export class DataSetsApiClient extends BaseApiClient {
       data_set_id: documentSource.data_set_id
     }
 
-    const response = await fetch(`${this.apiBase}/api/data_sets/${documentSource.data_set_id}/document_sources/${documentSource.id}`,
+    const response = await fetch(`${this.apiBase}/api/data_sets/${documentSource.data_set_id}/document_sources/${documentSource.id}/`,
       {
         ...this._requestConfiguration(),
         body: JSON.stringify(body),
@@ -198,18 +198,18 @@ export class DataSetsApiClient extends BaseApiClient {
   }
 
   async getDataSetDocumentSource(dataSetId: number, documentSourceId: number): Promise<CatalogSource> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${documentSourceId}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${documentSourceId}/`, this._requestConfiguration());
     return await response.json() as CatalogSource;
   }
 
   async getDataSetDocumentSources(dataSetId: number): Promise<CatalogSource[]> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/document_sources`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/document_sources/`, this._requestConfiguration());
     return (await response.json()).results as CatalogSource[];
   }
 
   async addDataSetDocumentSource(dataSetId: number, pluginName: string, config: object): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/`,
       {
         ...this._requestConfiguration(),
         method: "POST",
@@ -220,7 +220,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncAllDocumentSources(): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/document_sources/sync`,
+      `${this.apiBase}/api/document_sources/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -230,7 +230,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncDataSetDocumentSources(dataSetId: number | undefined): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/sync`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -240,7 +240,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncDataSetDocumentSource(dataSetId: number, pluginId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${pluginId}/sync`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${pluginId}/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -250,7 +250,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async removeDataSetDocumentSource(dataSetId: number, pluginId: number): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${pluginId}`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/document_sources/${pluginId}/`,
       {
         ...this._requestConfiguration(),
         method: "DELETE"
@@ -260,7 +260,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncDataSetAllSources(dataSetId: number | undefined): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/data_sets/${dataSetId}/sync`,
+      `${this.apiBase}/api/data_sets/${dataSetId}/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -270,7 +270,7 @@ export class DataSetsApiClient extends BaseApiClient {
 
   async syncAllSources(): Promise<void> {
     await fetch(
-      `${this.apiBase}/api/sync`,
+      `${this.apiBase}/api/sync/`,
       {
         ...this._requestConfiguration(),
         method: "POST"
@@ -279,7 +279,7 @@ export class DataSetsApiClient extends BaseApiClient {
   }
 
   async getDataSet(dataSetId: number): Promise<DataSet> {
-    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/`, this._requestConfiguration());
     const data = await response.json();
     
     return {
@@ -303,7 +303,7 @@ export class DataSetsApiClient extends BaseApiClient {
       system_message: dataSet.systemMessage
     }
 
-    await fetch(`${this.apiBase}/api/data_sets/${dataSetId}`,
+    await fetch(`${this.apiBase}/api/data_sets/${dataSetId}/`,
       {
         ...this._requestConfiguration(),
         method: 'PATCH',

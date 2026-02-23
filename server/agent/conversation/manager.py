@@ -47,6 +47,14 @@ class ConversationManager:
             conversation.summary = message
             conversation.save()
 
+        # Guard against duplicate responses on Celery task retry:
+        # If an AI message already exists after the last human message with this text, reuse it.
+        last_human = conversation.messages.filter(role="human", text=message, answer_failed=False).order_by("-created_at").first()
+        if last_human:
+            existing_ai = conversation.messages.filter(role="ai", created_at__gt=last_human.created_at, answer_failed=False).order_by("created_at").first()
+            if existing_ai:
+                return existing_ai
+
         self.get_answer(conversation, message, streaming)
         response = conversation.messages.order_by("created_at").last()
 

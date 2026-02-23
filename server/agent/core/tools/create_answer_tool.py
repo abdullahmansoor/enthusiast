@@ -26,9 +26,10 @@ CREATE_CONTENT_PROMPT_TEMPLATE = """
     {query}
     ```
     Be concise and make sure that the response is to the point. Don't include unnecessary information.
+    If a product is found, always include its name, price, and category even if the description is sparse.
 
-    IMPORTANT: If the documents and products are empty or don't contain relevant information to answer the query,
-    clearly state that you don't have information to answer this question based on the available knowledge base.
+    IMPORTANT: If the documents and products lists are completely empty, clearly state that you don't have
+    information to answer this question based on the available knowledge base.
 """
 
 

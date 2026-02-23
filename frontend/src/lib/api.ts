@@ -54,7 +54,7 @@ export class ApiClient {
     await this.ensureCsrf();
     const csrftoken = this.getCookie('csrftoken') ?? '';
 
-    const response = await fetch(`${this.apiBase}/api/auth/login`, {
+    const response = await fetch(`${this.apiBase}/api/auth/login/`, {
       method: 'POST',
       credentials: 'include',                 // <-- send/receive cookies
       headers: {
@@ -81,7 +81,7 @@ export class ApiClient {
     }
   }
   async login(email: string, password: string): Promise<Token> {
-    const response = await fetch(`${this.apiBase}/api/auth/login`, {
+    const response = await fetch(`${this.apiBase}/api/auth/login/`, {
       headers: {
         'Content-Type': 'application/json'
       },
@@ -97,7 +97,7 @@ export class ApiClient {
   }
 
   async getAccount(): Promise<Account> {
-    const response = await fetch(`${this.apiBase}/api/account`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/account/`, this._requestConfiguration());
     const responseJson = await response.json() as AccountResponse;
     return {
       email: responseJson.email,
@@ -110,17 +110,17 @@ export class ApiClient {
   }
 
   async getAllUsers(): Promise<User[]> {
-    const response = await fetch(`${this.apiBase}/api/users?page_size=1000`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/users/?page_size=1000`, this._requestConfiguration());
     return (await response.json()).results as User[];
   }
 
   async getAllProductSourcePlugins(): Promise<SourcePlugin[]> {
-    const response = await fetch(`${this.apiBase}/api/plugins/product_source_plugins?page_size=1000`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/plugins/product_source_plugins/?page_size=1000`, this._requestConfiguration());
     return (await response.json()).choices as SourcePlugin[];
   }
 
   async getAllDocumentSourcePlugins(): Promise<SourcePlugin[]> {
-    const response = await fetch(`${this.apiBase}/api/plugins/document_source_plugins?page_size=1000`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/plugins/document_source_plugins/?page_size=1000`, this._requestConfiguration());
     return (await response.json()).choices as SourcePlugin[];
   }  
 

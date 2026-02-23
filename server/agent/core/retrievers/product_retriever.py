@@ -1,6 +1,10 @@
+import logging
 from typing import Self
 
 from django.core import serializers
+from django.db import ProgrammingError
+
+logger = logging.getLogger(__name__)
 from enthusiast_common.builder import RepositoriesInstances
 from enthusiast_common.config import AgentConfig
 from enthusiast_common.registry import BaseEmbeddingProviderRegistry
@@ -61,10 +65,18 @@ class ProductRetriever(BaseProductRetriever):
 
     def find_products_matching_query(self, user_query: str) -> list[Product]:
         agent_where_clause = self._build_where_clause_for_query(user_query)
-        where_conditions = [f"data_set_id = {self.data_set_id}"]
+        fallback_conditions = [f"data_set_id = {self.data_set_id}"]
         if agent_where_clause:
-            where_conditions.append(agent_where_clause)
-        return self.product_repo.extra(where_conditions=where_conditions)[: self.number_of_products]
+            where_conditions = fallback_conditions + [agent_where_clause]
+            try:
+                results = list(self.product_repo.extra(where_conditions=where_conditions)[: self.number_of_products])
+            except ProgrammingError:
+                logger.warning(f"[ProductRetriever] WHERE clause caused SQL error, falling back. clause='{agent_where_clause[:100]}'")
+                results = []
+            if results:
+                return results
+            logger.info(f"[ProductRetriever] WHERE clause returned 0 products, falling back to dataset products. clause='{agent_where_clause[:100]}'")
+        return list(self.product_repo.extra(where_conditions=fallback_conditions)[: self.number_of_products])
 
     def get_sample_products_json(self) -> str:
         sample_products = self.product_repo.filter(data_set_id__exact=self.data_set_id)[: self.max_sample_products]
@@ -74,6 +86,7 @@ class ProductRetriever(BaseProductRetriever):
         chain = PromptTemplate.from_template(self.prompt_template) | self.llm
         llm_result = chain.invoke({"sample_products_json": self.get_sample_products_json(), "query": query})
         sanitized_result = llm_result.content.strip("`").removeprefix("sql").strip("\n").replace("%", "%%")
+        logger.info(f"[ProductRetriever] query='{query}' WHERE clause='{sanitized_result}'")
         return sanitized_result
 
     @classmethod

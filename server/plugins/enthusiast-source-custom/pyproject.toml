@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "enthusiast-source-custom"
+version = "0.0.1"
+description = "Custom product source plugin for Enthusiast."
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+enthusiast-common = ">=1.3,<2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

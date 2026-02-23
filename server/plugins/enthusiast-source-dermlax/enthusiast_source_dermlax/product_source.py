@@ -151,7 +151,13 @@ class DermlaxProductSource(ProductSourcePlugin):
             price = self._safe_price(r)
             if price is None:
                 # skip products with no valid price
-                continue            
+                continue
+            if float(price) == 0:
+                # skip zero-price test/placeholder entries
+                continue
+            if self._val(r, "Status") == "draft":
+                # skip unpublished draft products
+                continue
             cats     = self._categories_from(r)
 
             props = {

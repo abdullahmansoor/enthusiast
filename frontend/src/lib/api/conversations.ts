@@ -18,7 +18,7 @@ type TaskState = {
 
 export class ConversationsApiClient extends BaseApiClient {
   async getConversations(dataSetId: number, page: number = 1): Promise<PaginatedResult<Conversation>> {
-    const response = await fetch(`${this.apiBase}/api/conversations?data_set_id=${dataSetId}&page=${page}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/conversations/?data_set_id=${dataSetId}&page=${page}`, this._requestConfiguration());
     return await response.json() as Promise<PaginatedResult<Conversation>>;
   }
 
@@ -31,7 +31,7 @@ export class ConversationsApiClient extends BaseApiClient {
     requestConfiguration.method = "POST";
     requestConfiguration.body = JSON.stringify(requestBody);
 
-    const response = await fetch(`${this.apiBase}/api/conversations`, requestConfiguration);
+    const response = await fetch(`${this.apiBase}/api/conversations/`, requestConfiguration);
 
     if (!response.ok) {
       throw new Error(`Failed to create conversation: ${response.statusText}`);
@@ -48,7 +48,7 @@ export class ConversationsApiClient extends BaseApiClient {
       streaming
     }
 
-    const response = await fetch(`${this.apiBase}/api/conversations/${conversationId}`, {
+    const response = await fetch(`${this.apiBase}/api/conversations/${conversationId}/`, {
       ...this._requestConfiguration(),
       method: "POST",
       body: JSON.stringify(requestBody)
@@ -62,7 +62,7 @@ export class ConversationsApiClient extends BaseApiClient {
   }
 
   async getTaskStatus(taskHandle: TaskHandle): Promise<string> {
-    const response = await fetch(`${this.apiBase}/api/task_status/${taskHandle.task_id}`, {...this._requestConfiguration()});
+    const response = await fetch(`${this.apiBase}/api/task_status/${taskHandle.task_id}/`, {...this._requestConfiguration()});
     const { state } = await response.json() as TaskState;
     return state;
   }
@@ -80,7 +80,7 @@ export class ConversationsApiClient extends BaseApiClient {
 
   async getConversation(conversation_id: number | null): Promise<Conversation> {
     try {
-      const response = await fetch(`${this.apiBase}/api/conversations/${conversation_id}`, {
+      const response = await fetch(`${this.apiBase}/api/conversations/${conversation_id}/`, {
         ...this._requestConfiguration()
       });
 

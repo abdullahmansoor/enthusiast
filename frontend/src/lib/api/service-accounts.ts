@@ -28,7 +28,7 @@ export type UpdateServiceAccountPayload = CreateServiceAccountPayload;
 
 export class ServiceAccountsApiClient extends BaseApiClient {
   async getServiceAccounts(page: number): Promise<PaginatedResult<ServiceAccount>> {
-    const response = await fetch(`${this.apiBase}/api/service_accounts?page=${page}`, this._requestConfiguration());
+    const response = await fetch(`${this.apiBase}/api/service_accounts/?page=${page}`, this._requestConfiguration());
     const result = await response.json() as PaginatedResult<ServiceAccountResponse>;
 
     return {
@@ -66,7 +66,7 @@ export class ServiceAccountsApiClient extends BaseApiClient {
       is_active: serviceAccount.isActive
     };
 
-    return await fetch(`${this.apiBase}/api/service_accounts/${id}`, {
+    return await fetch(`${this.apiBase}/api/service_accounts/${id}/`, {
       ...this._requestConfiguration(),
       method: 'PATCH',
       body: JSON.stringify(payload)
@@ -74,7 +74,7 @@ export class ServiceAccountsApiClient extends BaseApiClient {
   }
 
   async checkServiceNameAvailability(name: string): Promise<boolean> {
-    const response = await fetch(`${this.apiBase}/api/service_accounts/check_name`, {
+    const response = await fetch(`${this.apiBase}/api/service_accounts/check_name/`, {
       ...this._requestConfiguration(),
       method: 'POST',
       body: JSON.stringify({ name })
@@ -85,7 +85,7 @@ export class ServiceAccountsApiClient extends BaseApiClient {
   }
 
   async resetServiceAccountToken(id: number): Promise<Token> {
-    const response = await fetch(`${this.apiBase}/api/service_accounts/${id}/reset_token`, {
+    const response = await fetch(`${this.apiBase}/api/service_accounts/${id}/reset_token/`, {
       ...this._requestConfiguration(),
       method: 'POST'
     });
