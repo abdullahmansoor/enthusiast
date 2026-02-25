@@ -103,6 +103,7 @@ zstandard==0.23.0 ; python_version >= "3.10" and python_version < "4.0"
 -e ./plugins/enthusiast-file-parsers
 -e ./plugins/enthusiast-source-shopify
 -e ./plugins/enthusiast-source-dermlax
+-e ./server/plugins/enthusiast-source-custom
 
 # Analytics dependencies for MVP
 langdetect>=1.0.9
