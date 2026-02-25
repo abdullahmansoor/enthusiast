@@ -14,6 +14,7 @@ import json
 import os
 import ssl
 import sys
+import urllib.parse
 from pathlib import Path
 
 from environ import Env
@@ -24,6 +25,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = Env()
 if env.str("ECL_DJANGO_SECRET_KEY", None) is None:
     env.read_env(BASE_DIR / ".env")
+
+
+def _normalize_rediss_cert_reqs(url: str) -> str:
+    """Normalize redis-py ssl_cert_reqs values for rediss:// URLs."""
+    if not url or not url.startswith("rediss://"):
+        return url
+    parsed = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    cert_reqs = query.get("ssl_cert_reqs", [])
+    if cert_reqs and cert_reqs[-1].upper() == "CERT_NONE":
+        # redis-py expects "none|optional|required" strings in URLs
+        query["ssl_cert_reqs"] = ["none"]
+        new_query = urllib.parse.urlencode(query, doseq=True)
+        return urllib.parse.urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment)
+        )
+    return url
+
+
+CHANNEL_REDIS_URL = _normalize_rediss_cert_reqs(env.str("ECL_CELERY_BROKER_URL"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -127,7 +148,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("ECL_CELERY_BROKER_URL")],
+            "hosts": [CHANNEL_REDIS_URL],
         },
     },
 }
@@ -232,8 +253,8 @@ SWAGGER_SETTINGS = {
 }
 
 # CELERY
-CELERY_BROKER_URL = env.str("ECL_CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = env.str("ECL_CELERY_RESULT_BACKEND")
+CELERY_BROKER_URL = CHANNEL_REDIS_URL
+CELERY_RESULT_BACKEND = _normalize_rediss_cert_reqs(env.str("ECL_CELERY_RESULT_BACKEND"))
 
 if CELERY_BROKER_URL.startswith("rediss://"):
     CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
