@@ -120,7 +120,7 @@ class ProductRetriever(BaseProductRetriever):
                 SequenceMatcher(None, query_norm, name).ratio(),
                 SequenceMatcher(None, query_norm, categories).ratio(),
             )
-            if score >= 0.55:
+            if score >= 0.5:
                 scored.append((score, product))
         scored.sort(key=lambda item: item[0], reverse=True)
         return [product for _, product in scored[: self.number_of_products]]
@@ -128,8 +128,37 @@ class ProductRetriever(BaseProductRetriever):
     @staticmethod
     def _tokenize_query(query: str) -> list[str]:
         cleaned = re.sub(r"[^a-zA-Z0-9\s]+", " ", query).lower()
-        tokens = [token for token in cleaned.split() if len(token) >= 3]
-        return tokens
+        raw_tokens = [token for token in cleaned.split() if len(token) >= 3]
+        stopwords = {
+            "what",
+            "are",
+            "is",
+            "do",
+            "does",
+            "you",
+            "have",
+            "any",
+            "the",
+            "a",
+            "an",
+            "of",
+            "for",
+            "to",
+            "with",
+            "related",
+            "products",
+            "product",
+            "category",
+            "categories",
+        }
+        tokens = [token for token in raw_tokens if token not in stopwords]
+        expanded = set(tokens)
+        for token in tokens:
+            if token.endswith("s") and len(token) > 4:
+                expanded.add(token[:-1])
+            else:
+                expanded.add(f"{token}s")
+        return list(expanded)
 
     @classmethod
     def create(
