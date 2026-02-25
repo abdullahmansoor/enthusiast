@@ -60,8 +60,8 @@ def get_default_config() -> DefaultAgentConfig:
                 retriever_class=ProductRetriever,
                 extra_kwargs={
                     "prompt_template": QUERY_PROMPT_TEMPLATE,
-                    "max_sample_products": 12,
-                    "number_of_products": 12,
+                    "max_sample_products": 300,
+                    "number_of_products": 300,
                 },
             ),
         ),

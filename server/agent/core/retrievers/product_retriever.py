@@ -52,8 +52,8 @@ class ProductRetriever(BaseProductRetriever):
         product_repo: BaseProductRepository,
         llm: BaseLanguageModel,
         prompt_template: str,
-        number_of_products: int = 12,
-        max_sample_products: int = 12,
+        number_of_products: int = 300,
+        max_sample_products: int = 300,
     ):
         self.data_set_id = data_set_id
         self.data_set_repo = data_set_repo
