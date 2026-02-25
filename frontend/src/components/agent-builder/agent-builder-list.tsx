@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles, Copy, Trash2, Play } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { ApiClient } from "@/lib/api";
 import { authenticationProviderInstance } from "@/lib/authentication-provider";
 import { AgentBuilderListItem } from "@/lib/types";

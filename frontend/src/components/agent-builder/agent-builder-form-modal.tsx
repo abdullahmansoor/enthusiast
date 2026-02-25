@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { AgentBuilderListItem, AgentBuilderConfig, AgentBuilderAgent } from "@/lib/types";
+import { AgentBuilderListItem, AgentBuilderConfig } from "@/lib/types";
 import { ApiClient } from "@/lib/api";
 import { authenticationProviderInstance } from "@/lib/authentication-provider";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,6 @@ export function AgentBuilderFormModal({
 }: AgentBuilderFormModalProps) {
   const { dataSetId } = useApplicationContext() ?? { dataSetId: null };
   const [loading, setLoading] = useState(false);
-  const [fullAgent, setFullAgent] = useState<AgentBuilderAgent | null>(null);
   const { toast } = useToast();
 
   // Form state
@@ -70,7 +69,6 @@ export function AgentBuilderFormModal({
         .agents()
         .getBuilderAgent(agent.id)
         .then((data) => {
-          setFullAgent(data);
           setName(data.name);
           setDescription(data.description);
           setConfig(data.config);

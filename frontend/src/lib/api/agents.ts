@@ -6,7 +6,6 @@ import {
     AgentBuilderAgent,
     AgentBuilderListResponse,
     AgentBuilderConfig,
-    AgentTestRequest,
     AgentTestResponse
 } from "@/lib/types.ts";
 import {ApiError} from "@/lib/api-error.ts";
@@ -127,6 +126,7 @@ export class AgentsApiClient extends BaseApiClient {
 
         if (!response.ok) {
             throw new ApiError(`Failed to fetch builder agents: ${response.statusText}`, {
+                data: null,
                 status: response.status
             });
         }
@@ -145,6 +145,7 @@ export class AgentsApiClient extends BaseApiClient {
 
         if (!response.ok) {
             throw new ApiError(`Failed to fetch agent: ${response.statusText}`, {
+                data: null,
                 status: response.status
             });
         }
@@ -297,6 +298,7 @@ export class AgentsApiClient extends BaseApiClient {
 
         if (!response.ok) {
             throw new ApiError(`Failed to fetch agent versions: ${response.statusText}`, {
+                data: null,
                 status: response.status
             });
         }
