@@ -202,3 +202,82 @@ export type AgentTestResponse = {
     processing_time?: number;
   };
 };
+
+// Analytics Dashboard Types
+export type KPIData = {
+  answer_relevance: number | null;
+  faithfulness: number | null;
+  coherence: number | null;
+  toxicity: number | null;
+  composite_quality: number | null;
+  total_conversations: number;
+  date_range: { start: string; end: string };
+};
+
+export type TimeSeriesPoint = {
+  date: string;
+  value: number;
+  count: number;
+};
+
+export type TimeSeriesData = {
+  metric_name: string;
+  data: TimeSeriesPoint[];
+  date_range: { start: string; end: string };
+};
+
+export type DistributionStats = {
+  mean: number; median: number; std: number;
+  min: number; max: number;
+  p10: number; p25: number; p75: number; p90: number;
+  count: number;
+};
+
+export type DistributionData = {
+  metric_name: string;
+  stats: DistributionStats;
+  values: number[];
+};
+
+export type ConversationWithMetrics = {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  created_at: string;
+  message_count: number;
+  metrics: Record<string, number>;
+};
+
+export type ConversationListData = {
+  results: ConversationWithMetrics[];
+  count: number;
+  total: number;
+  has_more: boolean;
+};
+
+export type MessageDetail = {
+  id: number;
+  role: string;
+  text: string;
+  created_at: string;
+  metrics: Record<string, number>;
+};
+
+export type SessionDetail = {
+  conversation_id: string;
+  agent_id: string;
+  agent_name: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  session_metrics: Record<string, number>;
+  messages: MessageDetail[];
+};
+
+export type MetricDefinition = {
+  name: string;
+  display_name: string;
+  description: string;
+  level: 'turn' | 'session';
+  stage: 1 | 2 | 3;
+};

@@ -22,6 +22,7 @@ from agent.serializers import (
     ConversationSerializer,
     MessageSerializer,
 )
+from agent.conversation import ConversationManager
 
 
 class AgentBuilderViewSet(viewsets.ModelViewSet):
@@ -134,7 +135,7 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
             conversation = Conversation.objects.create(
                 agent=agent,
                 user=request.user,
-                dataset=agent.dataset
+                data_set=agent.dataset
             )
 
             # Add user message
@@ -145,8 +146,6 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
             )
 
             # Generate response using ConversationManager
-            from agent.conversation import ConversationManager
-
             manager = ConversationManager(conversation)
             response_text, metadata = manager.respond_to_user_message(message_text)
 
@@ -155,7 +154,6 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
                 conversation=conversation,
                 role='assistant',
                 text=response_text,
-                metadata=metadata or {}
             )
 
             # Prepare response
@@ -197,7 +195,7 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
             agent=agent
         ).select_related('user').annotate(
             message_count=Count('messages')
-        ).order_by('-created_at')[offset:offset + limit]
+        ).order_by('-started_at')[offset:offset + limit]
 
         serializer = ConversationSerializer(conversations, many=True)
 
@@ -229,13 +227,12 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
             total_messages=Count('messages')
         )
 
-        # Get rating stats (if Message has rating field)
-        # Note: Adjust if your Message model has a different rating field
+        # Get rating stats
         rating_stats = Message.objects.filter(
             conversation__agent=agent,
             role='assistant'
         ).aggregate(
-            avg_rating=Avg('metadata__rating')
+            avg_rating=Avg('rating')
         )
 
         return Response({

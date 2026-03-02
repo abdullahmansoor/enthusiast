@@ -6,7 +6,6 @@ Metrics models for storing analytics data at different levels:
 """
 
 from django.db import models
-from django.contrib.postgres.indexes import BrinIndex
 
 
 class TurnMetric(models.Model):
@@ -35,7 +34,7 @@ class TurnMetric(models.Model):
     value = models.FloatField()
 
     # Context for filtering
-    agent_id = models.UUIDField()
+    agent_id = models.IntegerField(null=True, blank=True)
     agent_version = models.IntegerField(default=1)
     model = models.CharField(max_length=100, blank=True)
 
@@ -51,7 +50,6 @@ class TurnMetric(models.Model):
             models.Index(fields=['conversation', 'metric_name']),
             models.Index(fields=['metric_name', 'timestamp']),
             models.Index(fields=['agent_id', 'timestamp']),
-            BrinIndex(fields=['timestamp']),  # Efficient for time-series queries
         ]
         ordering = ['-timestamp']
 
@@ -80,7 +78,7 @@ class SessionMetric(models.Model):
     count = models.IntegerField(default=1)  # Number of samples (for averaging)
 
     # Context
-    agent_id = models.UUIDField()
+    agent_id = models.IntegerField(null=True, blank=True)
     agent_version = models.IntegerField(default=1)
     model = models.CharField(max_length=100, blank=True)
 
@@ -118,7 +116,7 @@ class DailyMetric(models.Model):
     count = models.IntegerField()  # Sample size
 
     # Dimensions for filtering
-    agent_id = models.UUIDField(null=True, blank=True)
+    agent_id = models.IntegerField(null=True, blank=True)
     model = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=10, blank=True)
     channel = models.CharField(max_length=50, blank=True)

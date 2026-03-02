@@ -237,6 +237,7 @@ CELERY_RESULT_BACKEND = env.str("ECL_CELERY_RESULT_BACKEND")
 if CELERY_BROKER_URL.startswith("rediss://"):
     CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
     CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+    CHANNEL_LAYERS["default"]["CONFIG"]["hosts"] = [{"address": CELERY_BROKER_URL, "ssl_cert_reqs": "none"}]
 
 CELERY_TIMEZONE = env.str("ECL_CELERY_TIMEZONE")
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

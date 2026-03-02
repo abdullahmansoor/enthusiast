@@ -209,7 +209,7 @@ class MetricsService:
     def rollup_daily_metrics(
         self,
         target_date: date,
-        agent_id: Optional[str] = None
+        agent_id: Optional[int] = None
     ) -> List[DailyMetric]:
         """
         Rollup session metrics to daily aggregates.
@@ -289,8 +289,8 @@ class MetricsService:
         self,
         start_date: date,
         end_date: date,
-        agent_id: Optional[str] = None,
-        agent_ids: Optional[List[str]] = None
+        agent_id: Optional[int] = None,
+        agent_ids: Optional[List[int]] = None
     ) -> Dict[str, Any]:
         """
         Get key performance indicators for dashboard.
@@ -312,7 +312,7 @@ class MetricsService:
         else:
             agent_filter = None
 
-        cache_key = f"kpis:{start_date}:{end_date}:{'-'.join(agent_filter) if agent_filter else 'all'}"
+        cache_key = f"kpis:{start_date}:{end_date}:{'-'.join(str(a) for a in agent_filter) if agent_filter else 'all'}"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -339,11 +339,18 @@ class MetricsService:
             'composite_quality': self._get_metric_avg(
                 filters, 'composite_quality'
             ),
-            'total_conversations': SessionMetric.objects.filter(
-                timestamp__gte=start_date,
-                timestamp__lte=end_date,
-                agent_id__in=agent_filter if agent_filter else [F('agent_id')]
-            ).values('conversation').distinct().count(),
+            'total_conversations': (
+                SessionMetric.objects.filter(
+                    timestamp__date__gte=start_date,
+                    timestamp__date__lte=end_date,
+                    agent_id__in=agent_filter,
+                ).values('conversation').distinct().count()
+                if agent_filter else
+                SessionMetric.objects.filter(
+                    timestamp__date__gte=start_date,
+                    timestamp__date__lte=end_date,
+                ).values('conversation').distinct().count()
+            ),
             'date_range': {
                 'start': start_date.isoformat(),
                 'end': end_date.isoformat()
@@ -360,7 +367,7 @@ class MetricsService:
         metric_name: str,
         start_date: date,
         end_date: date,
-        agent_id: Optional[str] = None,
+        agent_id: Optional[int] = None,
         granularity: str = 'daily'
     ) -> List[Dict[str, Any]]:
         """
@@ -395,7 +402,7 @@ class MetricsService:
         metric_name: str,
         start_date: date,
         end_date: date,
-        agent_id: Optional[str] = None
+        agent_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Get distribution/histogram of a metric.
@@ -409,10 +416,10 @@ class MetricsService:
         Returns:
             Dict with percentiles and histogram data
         """
-        # Get all values
+        # Get all values (use __date lookups for inclusive day-boundary matching)
         filters = Q(
-            timestamp__gte=start_date,
-            timestamp__lte=end_date,
+            timestamp__date__gte=start_date,
+            timestamp__date__lte=end_date,
             metric_name=metric_name
         )
         if agent_id:
@@ -496,10 +503,10 @@ class MetricsService:
                 metrics[sm.metric_name] = sm.value
 
             results.append({
-                'id': str(conv.id),
-                'agent_id': str(conv.agent_id),
+                'id': conv.id,
+                'agent_id': conv.agent_id,
                 'agent_name': conv.agent.name,
-                'created_at': conv.created_at,
+                'created_at': conv.started_at,
                 'message_count': conv.messages.count(),
                 'metrics': metrics
             })
@@ -550,7 +557,7 @@ class MetricsService:
         metric_name: str,
         start_date: date,
         end_date: date,
-        agent_id: Optional[str] = None,
+        agent_id: Optional[int] = None,
         threshold: float = 90,
         direction: str = 'both',
         limit: int = 10
@@ -570,10 +577,10 @@ class MetricsService:
         Returns:
             List of outlier conversations with metrics
         """
-        # Build filters
+        # Build filters (use __date lookups for inclusive day-boundary matching)
         filters = Q(
-            timestamp__gte=start_date,
-            timestamp__lte=end_date,
+            timestamp__date__gte=start_date,
+            timestamp__date__lte=end_date,
             metric_name=metric_name
         )
         if agent_id:
@@ -615,13 +622,13 @@ class MetricsService:
             )
 
             results.append({
-                'conversation_id': str(conv.id),
-                'agent_id': str(conv.agent_id),
+                'conversation_id': conv.id,
+                'agent_id': conv.agent_id,
                 'agent_name': conv.agent.name,
                 'metric_name': metric_name,
                 'value': session_metric.value,
                 'percentile': percentile,
-                'created_at': conv.created_at,
+                'created_at': conv.started_at,
                 'message_count': conv.messages.count()
             })
 

@@ -9,10 +9,11 @@ import {
   BookTextIcon,
   HistoryIcon,
   PlugZapIcon,
-  UserIcon, 
-  HelpCircleIcon, 
+  UserIcon,
+  HelpCircleIcon,
   SparklesIcon,
   LinkIcon,
+  BarChart2Icon,
 } from "lucide-react";
 import { UserMenu } from "@/components/navigation/user-menu.tsx";
 import { useApplicationContext } from "@/lib/use-application-context.ts";
@@ -108,6 +109,15 @@ export function MainSidebar() {
       },
   ]
 
+  const analyzeItems: SidebarSectionItemProps[] = [
+    {
+      title: "Analytics",
+      link: "/analytics",
+      key: "analytics",
+      icon: <BarChart2Icon />
+    }
+  ];
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -117,6 +127,7 @@ export function MainSidebar() {
         <MainSidebarSection title="Ask" items={askItems} />
         <MainSidebarSection title="Configure" items={configureItems} />
         <MainSidebarSection title="Synchronize" items={synchronizeItems} />
+        <MainSidebarSection title="Analyze" items={analyzeItems} />
         {account && account.isStaff && (
           <>
             <MainSidebarSection className="mt-auto" title="Manage" items={manageItems} />

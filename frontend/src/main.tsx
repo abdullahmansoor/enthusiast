@@ -24,6 +24,7 @@ import { OnboardingIndex } from "@/pages/onboarding";
 import { NewChat } from "@/pages/data-sets/(id)/chat/new/(agent)/index.tsx";
 import AgentsPage from "@/pages/data-sets/(id)/agents";
 import { AgentBuilderPage } from "@/pages/agent-builder";
+import { AnalyticsDashboardPage } from "@/pages/analytics";
 
 const api = new ApiClient(authenticationProviderInstance);
 
@@ -126,6 +127,10 @@ const router = createBrowserRouter([
       {
         path: '/agent-builder',
         element: <AgentBuilderPage />
+      },
+      {
+        path: '/analytics',
+        element: <AnalyticsDashboardPage />
       }
     ]
   },

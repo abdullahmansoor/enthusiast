@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import pytest
@@ -8,6 +9,24 @@ from rest_framework.test import APIClient
 from account.models import User
 from agent.models import Conversation
 from catalog.models import DataSet
+
+# ---------------------------------------------------------------------------
+# Allow running tests locally without a real Postgres server.
+# If the DB_HOST env is not set (or points to the Docker hostname "postgres"),
+# fall back to SQLite so that `pytest` works on a developer machine.
+# ---------------------------------------------------------------------------
+def pytest_configure(config):
+    db_host = os.environ.get("ECL_DB_HOST", "postgres")
+    if db_host == "postgres":
+        # Override DATABASES to use SQLite in-memory for local runs.
+        from django.conf import settings
+        settings.DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": ":memory:",
+                "TEST": {"NAME": ":memory:"},
+            }
+        }
 
 
 @pytest.fixture

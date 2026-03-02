@@ -65,7 +65,7 @@ class DistributionSerializer(serializers.Serializer):
     """Distribution/histogram response"""
 
     metric_name = serializers.CharField()
-    stats = DistributionStatsSerializer()
+    stats = DistributionStatsSerializer(required=False, allow_null=True)
     values = serializers.ListField(child=serializers.FloatField())
 
 
@@ -79,8 +79,8 @@ class ConversationMetricSerializer(serializers.Serializer):
 class ConversationListItemSerializer(serializers.Serializer):
     """Conversation item in list view"""
 
-    id = serializers.UUIDField()
-    agent_id = serializers.UUIDField()
+    id = serializers.IntegerField()
+    agent_id = serializers.IntegerField()
     agent_name = serializers.CharField()
     created_at = serializers.DateTimeField()
     message_count = serializers.IntegerField()
@@ -110,8 +110,8 @@ class MessageDetailSerializer(serializers.Serializer):
 class SessionDetailSerializer(serializers.Serializer):
     """Detailed session with all messages and metrics"""
 
-    conversation_id = serializers.UUIDField()
-    agent_id = serializers.UUIDField()
+    conversation_id = serializers.IntegerField()
+    agent_id = serializers.IntegerField()
     agent_name = serializers.CharField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
@@ -168,7 +168,7 @@ class DateRangeFilterSerializer(serializers.Serializer):
 
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
-    agent_id = serializers.UUIDField(required=False, allow_null=True)
+    agent_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class MetricQuerySerializer(serializers.Serializer):
@@ -177,7 +177,7 @@ class MetricQuerySerializer(serializers.Serializer):
     metric_name = serializers.CharField(required=True)
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
-    agent_id = serializers.UUIDField(required=False, allow_null=True)
+    agent_id = serializers.IntegerField(required=False, allow_null=True)
     granularity = serializers.ChoiceField(
         choices=['daily', 'weekly'],
         default='daily',
@@ -188,7 +188,8 @@ class MetricQuerySerializer(serializers.Serializer):
 class OutlierConversationSerializer(serializers.Serializer):
     """Conversation that's an outlier on some metric"""
 
-    conversation_id = serializers.UUIDField()
+    conversation_id = serializers.IntegerField()
+    agent_id = serializers.IntegerField()
     agent_name = serializers.CharField()
     metric_name = serializers.CharField()
     value = serializers.FloatField()

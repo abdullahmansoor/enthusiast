@@ -117,7 +117,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
         kpis = self.service.get_kpis(
             start_date=start_date,
             end_date=end_date,
-            agent_id=str(agent_id) if agent_id else None
+            agent_id=agent_id
         )
 
         # Filter to user's agents only
@@ -129,7 +129,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             kpis = self.service.get_kpis(
                 start_date=start_date,
                 end_date=end_date,
-                agent_ids=[str(aid) for aid in user_agent_ids]
+                agent_ids=user_agent_ids
             )
 
         # Serialize
@@ -186,7 +186,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             metric_name=metric_name,
             start_date=start_date,
             end_date=end_date,
-            agent_id=str(agent_id) if agent_id else None,
+            agent_id=agent_id,
             granularity=granularity
         )
 
@@ -247,8 +247,9 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             metric_name=metric_name,
             start_date=start_date,
             end_date=end_date,
-            agent_id=str(agent_id) if agent_id else None
+            agent_id=agent_id
         )
+        distribution['metric_name'] = metric_name
 
         serializer = DistributionSerializer(data=distribution)
         serializer.is_valid(raise_exception=True)
@@ -280,7 +281,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
         # Parse pagination
         page = int(request.query_params.get('page', 1))
         page_size = min(int(request.query_params.get('page_size', 20)), 100)
-        sort_by = request.query_params.get('sort_by', 'created_at')
+        sort_by = request.query_params.get('sort_by', 'started_at')
         order = request.query_params.get('order', 'desc')
 
         # Parse filters
@@ -309,16 +310,18 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             queryset = queryset.filter(agent_id=agent_id)
 
         if start_date:
-            queryset = queryset.filter(created_at__gte=start_date)
+            queryset = queryset.filter(started_at__date__gte=start_date)
 
         if end_date:
-            queryset = queryset.filter(created_at__lte=end_date)
+            queryset = queryset.filter(started_at__date__lte=end_date)
 
         # Get total count
         total = queryset.count()
 
-        # Apply sorting
-        sort_field = sort_by if order == 'asc' else f'-{sort_by}'
+        # Apply sorting — map frontend field names to actual model fields
+        field_map = {'created_at': 'started_at'}
+        model_sort_by = field_map.get(sort_by, sort_by)
+        sort_field = model_sort_by if order == 'asc' else f'-{model_sort_by}'
         queryset = queryset.order_by(sort_field)
 
         # Apply pagination
@@ -336,7 +339,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
                 'id': conv.id,
                 'agent_id': conv.agent_id,
                 'agent_name': conv.agent.name,
-                'created_at': conv.created_at,
+                'created_at': conv.started_at,
                 'message_count': conv.messages.count(),
                 'metrics': session_metrics
             })
@@ -372,7 +375,7 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
         # Get conversation
         try:
             conversation = Conversation.objects.get(id=pk)
-        except Conversation.DoesNotExist:
+        except (Conversation.DoesNotExist, ValueError, TypeError):
             return Response(
                 {'error': 'Conversation not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -407,8 +410,8 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             'conversation_id': conversation.id,
             'agent_id': conversation.agent_id,
             'agent_name': conversation.agent.name,
-            'created_at': conversation.created_at,
-            'updated_at': conversation.updated_at,
+            'created_at': conversation.started_at,
+            'updated_at': conversation.started_at,
             'message_count': len(messages),
             'session_metrics': session_metrics,
             'messages': messages
@@ -520,19 +523,19 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
             metric_name=metric_name,
             start_date=start_date,
             end_date=end_date,
-            agent_id=str(agent_id) if agent_id else None,
+            agent_id=agent_id,
             threshold=threshold,
             direction=direction,
             limit=limit
         )
 
         # Filter to user's agents
-        user_agent_ids = list(
+        user_agent_ids = set(
             self._get_user_agents().values_list('id', flat=True)
         )
         outliers = [
             o for o in outliers
-            if o.get('agent_id') in [str(aid) for aid in user_agent_ids]
+            if o.get('agent_id') in user_agent_ids
         ]
 
         serializer = OutlierConversationSerializer(data=outliers, many=True)
