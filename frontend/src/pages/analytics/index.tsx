@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageMain } from "@/components/util/page-main";
 import { PageHeading } from "@/components/util/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { KPISection } from "@/components/analytics/kpi-cards";
 import { TimeSeriesSection } from "@/components/analytics/time-series-chart";
 import { ConversationsSection } from "@/components/analytics/conversations-table";
+import { BusinessInsightsSection } from "@/components/analytics/business-insights";
+import { ApiClient } from "@/lib/api";
+import { authenticationProviderInstance } from "@/lib/authentication-provider";
 import { AnalyticsFilters } from "@/lib/api/analytics";
 
 function formatDate(date: Date): string {
@@ -19,11 +29,20 @@ function subtractDays(days: number): string {
   return formatDate(d);
 }
 
+type AgentOption = { id: number; name: string };
+
 export function AnalyticsDashboardPage() {
   const today = formatDate(new Date());
   const [startDate, setStartDate] = useState<string>(subtractDays(30));
   const [endDate, setEndDate] = useState<string>(today);
   const [agentId, setAgentId] = useState<string>("");
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+
+  // Load agents for filter dropdown
+  useEffect(() => {
+    const api = new ApiClient(authenticationProviderInstance);
+    api.analytics().getAgentsForFilter().then(setAgents).catch(() => {});
+  }, []);
 
   const filters: AnalyticsFilters = {
     start_date: startDate || undefined,
@@ -68,32 +87,38 @@ export function AnalyticsDashboardPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="agent-id">Agent ID (optional)</Label>
-          <Input
-            id="agent-id"
-            type="text"
-            placeholder="All agents"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            className="w-48"
-          />
+          <Label>Agent</Label>
+          <Select value={agentId} onValueChange={setAgentId}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="All agents" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All agents</SelectItem>
+              {agents.map((a) => (
+                <SelectItem key={a.id} value={String(a.id)}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => applyPreset(7)}>
-            Last 7 days
+            Last 7d
           </Button>
           <Button variant="outline" size="sm" onClick={() => applyPreset(30)}>
-            Last 30 days
+            Last 30d
           </Button>
           <Button variant="outline" size="sm" onClick={() => applyPreset(90)}>
-            Last 90 days
+            Last 90d
           </Button>
         </div>
       </div>
 
       <div className="space-y-8">
         <KPISection filters={filters} />
+        <BusinessInsightsSection filters={filters} />
         <TimeSeriesSection filters={filters} />
         <ConversationsSection filters={filters} />
       </div>

@@ -14,10 +14,32 @@ import { TimeSeriesData, TimeSeriesPoint } from "@/lib/types";
 import { AnalyticsFilters } from "@/lib/api/analytics";
 
 const METRICS = [
-  { value: "answer_relevance", label: "Answer Relevance" },
-  { value: "faithfulness", label: "Faithfulness" },
-  { value: "coherence", label: "Coherence" },
-  { value: "toxicity", label: "Toxicity" },
+  // AI quality proxies
+  { value: "answer_relevance_mean", label: "Answer Relevance" },
+  { value: "faithfulness_mean", label: "Faithfulness" },
+  { value: "coherence_mean", label: "Coherence" },
+  { value: "toxicity_mean", label: "Toxicity" },
+  { value: "resolution_quality_mean", label: "Resolution Quality" },
+  // Business / operational
+  { value: "answer_failure_rate", label: "Answer Failure Rate" },
+  { value: "knowledge_gap_rate", label: "Knowledge Gap Rate" },
+  { value: "user_satisfaction_score", label: "User Satisfaction" },
+  { value: "user_abandonment", label: "Abandonment Rate" },
+  { value: "session_depth", label: "Avg Session Depth" },
+  { value: "product_surface_mean", label: "Product Surface Rate" },
+  { value: "response_latency_mean", label: "Response Latency (s)" },
+  { value: "composite_quality", label: "Composite Quality" },
+];
+
+const METRIC_GROUPS = [
+  {
+    label: "AI Quality",
+    metrics: ["answer_relevance_mean", "faithfulness_mean", "coherence_mean", "toxicity_mean", "resolution_quality_mean"],
+  },
+  {
+    label: "Business",
+    metrics: ["answer_failure_rate", "knowledge_gap_rate", "user_satisfaction_score", "user_abandonment", "session_depth", "product_surface_mean", "response_latency_mean", "composite_quality"],
+  },
 ];
 
 interface TooltipState {
@@ -30,9 +52,10 @@ interface TooltipState {
 
 interface SVGLineChartProps {
   data: TimeSeriesPoint[];
+  isRawValue?: boolean;
 }
 
-function SVGLineChart({ data }: SVGLineChartProps) {
+function SVGLineChart({ data, isRawValue = false }: SVGLineChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
@@ -54,8 +77,15 @@ function SVGLineChart({ data }: SVGLineChartProps) {
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  const minValue = 0;
-  const maxValue = 1;
+  // Y-axis bounds: auto-scale for raw value metrics, fixed [0,1] for percentages
+  const dataMax = Math.max(...data.map((d) => d.value));
+  const dataMin = Math.min(...data.map((d) => d.value));
+  const minValue = isRawValue ? Math.max(0, dataMin * 0.9) : 0;
+  const maxValue = isRawValue ? (dataMax === 0 ? 1 : dataMax * 1.1) : 1;
+
+  const yTickCount = 5;
+  const yStep = (maxValue - minValue) / (yTickCount - 1);
+  const yTicks = Array.from({ length: yTickCount }, (_, i) => minValue + i * yStep);
 
   const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2;
 
@@ -74,9 +104,6 @@ function SVGLineChart({ data }: SVGLineChartProps) {
   }));
 
   const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
-
-  // Y-axis ticks
-  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
 
   // X-axis labels — show at most 8 evenly spaced labels
   const maxLabels = 8;
@@ -130,7 +157,7 @@ function SVGLineChart({ data }: SVGLineChartProps) {
                 fill="currentColor"
                 fillOpacity={0.5}
               >
-                {(tick * 100).toFixed(0)}%
+                {isRawValue ? tick.toFixed(1) : `${(tick * 100).toFixed(0)}%`}
               </text>
             </g>
           );
@@ -229,7 +256,7 @@ function SVGLineChart({ data }: SVGLineChartProps) {
               fontSize={11}
               fill="hsl(var(--popover-foreground))"
             >
-              Value: {(tooltip.value * 100).toFixed(1)}%
+              Value: {isRawValue ? tooltip.value.toFixed(1) : `${(tooltip.value * 100).toFixed(1)}%`}
             </text>
             <text
               x={Math.min(tooltip.x + 14, width - 134)}
@@ -250,8 +277,11 @@ interface TimeSeriesSectionProps {
   filters: AnalyticsFilters;
 }
 
+// Metrics that are NOT 0-1 percentages and should be displayed as raw numbers
+const RAW_VALUE_METRICS = new Set(["session_depth", "response_latency_mean"]);
+
 export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
-  const [metric, setMetric] = useState<string>("answer_relevance");
+  const [metric, setMetric] = useState<string>("answer_relevance_mean");
   const [data, setData] = useState<TimeSeriesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -275,20 +305,28 @@ export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
   }, [metric, filters.start_date, filters.end_date, filters.agent_id]);
 
   const metricLabel = METRICS.find((m) => m.value === metric)?.label ?? metric;
+  const isRawValue = RAW_VALUE_METRICS.has(metric);
 
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold">Metric Over Time</h2>
         <Select value={metric} onValueChange={setMetric}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-56">
             <SelectValue placeholder="Select metric" />
           </SelectTrigger>
           <SelectContent>
-            {METRICS.map((m) => (
-              <SelectItem key={m.value} value={m.value}>
-                {m.label}
-              </SelectItem>
+            {METRIC_GROUPS.map((group) => (
+              <div key={group.label}>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {group.label}
+                </div>
+                {METRICS.filter((m) => group.metrics.includes(m.value)).map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </div>
             ))}
           </SelectContent>
         </Select>
@@ -306,7 +344,7 @@ export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
           ) : error ? (
             <p className="text-sm text-destructive py-8 text-center">{error}</p>
           ) : (
-            <SVGLineChart data={data?.data ?? []} />
+            <SVGLineChart data={data?.data ?? []} isRawValue={isRawValue} />
           )}
         </CardContent>
       </Card>

@@ -65,11 +65,21 @@ class MetricsService:
         message_index = messages.index(message)
         user_message = messages[message_index - 1] if message_index > 0 else None
 
+        # Compute response latency (seconds between user message and assistant reply)
+        latency_seconds = None
+        if user_message:
+            delta = message.created_at - user_message.created_at
+            latency_seconds = delta.total_seconds()
+
         # Prepare turn data for evaluators
         turn_data = {
             'user_text': user_message.text if user_message else '',
             'assistant_text': message.text,
             'context': message.metadata.get('retrieved_context', '') if message.metadata else '',
+            # Business metric inputs
+            'answer_failed': message.answer_failed,
+            'user_rating': message.rating,
+            'latency_seconds': latency_seconds,
         }
 
         # Get metrics to compute based on stage
@@ -92,7 +102,7 @@ class MetricsService:
             try:
                 value = metric_def.compute_turn(turn_data)
 
-                # Skip if LLM judge returned sentinel value (not sampled)
+                # Skip sentinel values (-1.0 = not applicable / not sampled)
                 if value == -1.0:
                     continue
 
@@ -187,6 +197,10 @@ class MetricsService:
 
             try:
                 value = metric_def.reduce_session(session_data)
+
+                # Skip sentinel values (-1.0 = not applicable, e.g. no rated turns)
+                if value == -1.0:
+                    continue
 
                 session_metric = SessionMetric.objects.create(
                     conversation=conversation,
@@ -324,6 +338,7 @@ class MetricsService:
 
         # Query metrics
         kpis = {
+            # ── AI quality proxies ───────────────────────────────────────────
             'answer_relevance': self._get_metric_avg(
                 filters, 'answer_relevance_mean'
             ),
@@ -338,6 +353,28 @@ class MetricsService:
             ),
             'composite_quality': self._get_metric_avg(
                 filters, 'composite_quality'
+            ),
+            # ── Business / operational metrics ───────────────────────────────
+            'answer_failure_rate': self._get_metric_avg(
+                filters, 'answer_failure_rate'
+            ),
+            'knowledge_gap_rate': self._get_metric_avg(
+                filters, 'knowledge_gap_rate'
+            ),
+            'user_satisfaction_score': self._get_metric_avg(
+                filters, 'user_satisfaction_score'
+            ),
+            'user_abandonment_rate': self._get_metric_avg(
+                filters, 'user_abandonment'
+            ),
+            'avg_session_depth': self._get_metric_avg(
+                filters, 'session_depth'
+            ),
+            'product_surface_rate': self._get_metric_avg(
+                filters, 'product_surface_mean'
+            ),
+            'avg_response_latency': self._get_metric_avg(
+                filters, 'response_latency_mean'
             ),
             'total_conversations': (
                 SessionMetric.objects.filter(

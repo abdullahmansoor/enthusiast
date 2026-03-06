@@ -111,4 +111,14 @@ export class AnalyticsApiClient extends BaseApiClient {
     if (!response.ok) throw new Error(`Metrics catalog failed: ${response.statusText}`);
     return response.json() as Promise<MetricDefinition[]>;
   }
+
+  async getAgentsForFilter(): Promise<{ id: number; name: string }[]> {
+    const response = await fetch(
+      `${this.apiBase}/api/agents/`,
+      this._requestConfiguration()
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.results ?? []);
+  }
 }

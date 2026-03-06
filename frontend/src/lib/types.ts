@@ -205,11 +205,20 @@ export type AgentTestResponse = {
 
 // Analytics Dashboard Types
 export type KPIData = {
+  // AI quality proxies
   answer_relevance: number | null;
   faithfulness: number | null;
   coherence: number | null;
   toxicity: number | null;
   composite_quality: number | null;
+  // Business / operational metrics
+  answer_failure_rate: number | null;
+  knowledge_gap_rate: number | null;
+  user_satisfaction_score: number | null;
+  user_abandonment_rate: number | null;
+  avg_session_depth: number | null;
+  product_surface_rate: number | null;
+  avg_response_latency: number | null;
   total_conversations: number;
   date_range: { start: string; end: string };
 };

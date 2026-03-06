@@ -16,12 +16,21 @@ from analytics.models import TurnMetric, SessionMetric, DailyMetric
 class KPISerializer(serializers.Serializer):
     """KPI summary for dashboard overview"""
 
-    # Quality metrics
+    # Quality metrics (LLM-judged)
     answer_relevance = serializers.FloatField(allow_null=True)
     faithfulness = serializers.FloatField(allow_null=True)
     coherence = serializers.FloatField(allow_null=True)
     toxicity = serializers.FloatField(allow_null=True)
     composite_quality = serializers.FloatField(allow_null=True)
+
+    # Business / operational metrics
+    answer_failure_rate = serializers.FloatField(allow_null=True, required=False)
+    knowledge_gap_rate = serializers.FloatField(allow_null=True, required=False)
+    user_satisfaction_score = serializers.FloatField(allow_null=True, required=False)
+    user_abandonment_rate = serializers.FloatField(allow_null=True, required=False)
+    avg_session_depth = serializers.FloatField(allow_null=True, required=False)
+    avg_response_latency = serializers.FloatField(allow_null=True, required=False)
+    product_surface_rate = serializers.FloatField(allow_null=True, required=False)
 
     # Volume metrics
     total_conversations = serializers.IntegerField()
