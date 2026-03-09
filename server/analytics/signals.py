@@ -36,7 +36,7 @@ def evaluate_message_on_create(sender, instance, created, **kwargs):
         # Only evaluate new messages, not updates
         return
 
-    if instance.role != 'assistant':
+    if instance.role not in ('assistant', 'ai'):
         # Only evaluate assistant responses
         return
 
@@ -70,22 +70,25 @@ def evaluate_conversation_on_update(sender, instance, created, **kwargs):
     # Get message count
     message_count = instance.messages.count()
 
-    # Evaluate after every 5 messages, or if conversation has > 3 messages
-    # (This is configurable - adjust based on your needs)
+    # Evaluate after every 2 messages (1 turn), or every 5 messages thereafter
     should_evaluate = (
-        message_count >= 3 and
-        (message_count % 5 == 0 or message_count == 3)
+        message_count >= 2 and
+        (message_count % 2 == 0 or message_count % 5 == 0)
     )
 
     if should_evaluate:
         if ASYNC_EVALUATION:
             # Run in background
             evaluate_conversation_task.delay(instance.id)
+            from analytics.tasks import rollup_daily_metrics_task
+            rollup_daily_metrics_task.apply_async(countdown=5)
         else:
             # Run synchronously
             from analytics.services import MetricsService
+            from datetime import date
             service = MetricsService()
             service.compute_session_metrics(instance)
+            service.rollup_daily_metrics(date.today())
 
 
 # Optional: Disconnect signals for testing

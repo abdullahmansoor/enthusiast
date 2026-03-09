@@ -61,12 +61,13 @@ class BaseAgent(ABC, ExtraArgsClassBase):
         pass
 
     def set_runtime_arguments(self, runtime_arguments: Any) -> None:
-        tools_runtime_arguments = runtime_arguments.pop("tools")
+        tools_runtime_arguments = runtime_arguments.pop("tools", [])
         for key, value in runtime_arguments.items():
             class_field_key = key.upper()
-            field = getattr(self, class_field_key)
+            field = getattr(self, class_field_key, None)
             if field is None:
                 continue
             setattr(self, key.upper(), field(**value))
-        for index, tool in enumerate(self._tools):
-            tool.set_runtime_arguments(tools_runtime_arguments[index])
+        if tools_runtime_arguments:
+            for tool, tool_args in zip(self._tools, tools_runtime_arguments):
+                tool.set_runtime_arguments(tool_args)

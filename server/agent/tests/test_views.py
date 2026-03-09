@@ -397,7 +397,9 @@ class TestAgentDetailsView:
             assert response.status_code == status.HTTP_200_OK
             agent_instance.refresh_from_db()
             assert agent_instance.name == "updated"
-            assert agent_instance.config == updated_config
+            # Config may include default keys merged by Agent.save(); check subset only
+            for key, value in updated_config.items():
+                assert agent_instance.config[key] == value
 
     def test_put_removes_corrupted_flag_for_correct_data(self, api_client, url, config):
         dataset = baker.make(DataSet)

@@ -35,8 +35,7 @@ class MetricsServiceTestCase(TestCase):
         )
 
         self.dataset = DataSet.objects.create(
-            name='Test Dataset',
-            description='Test dataset'
+            name='Test Dataset'
         )
 
         self.agent = Agent.objects.create(
@@ -48,7 +47,7 @@ class MetricsServiceTestCase(TestCase):
         self.conversation = Conversation.objects.create(
             agent=self.agent,
             user=self.user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
 
         self.service = MetricsService()
@@ -167,7 +166,7 @@ class MetricsServiceTestCase(TestCase):
 
         # Rollup to daily
         today = date.today()
-        daily_metrics = self.service.rollup_daily_metrics(today, agent_id=str(self.agent.id))
+        daily_metrics = self.service.rollup_daily_metrics(today, agent_id=self.agent.id)
 
         # Should have created daily metrics
         self.assertGreater(len(daily_metrics), 0)
@@ -198,13 +197,13 @@ class MetricsServiceTestCase(TestCase):
         self.service.compute_session_metrics(self.conversation)
 
         today = date.today()
-        self.service.rollup_daily_metrics(today, agent_id=str(self.agent.id))
+        self.service.rollup_daily_metrics(today, agent_id=self.agent.id)
 
         # Get KPIs
         kpis = self.service.get_kpis(
             start_date=today,
             end_date=today,
-            agent_id=str(self.agent.id)
+            agent_id=self.agent.id
         )
 
         # Should have KPI data
@@ -231,7 +230,7 @@ class MetricsServiceTestCase(TestCase):
             metric_name='response_length_mean',
             start_date=date.today() - timedelta(days=7),
             end_date=date.today(),
-            agent_id=str(self.agent.id)
+            agent_id=self.agent.id
         )
 
         # Should have 3 data points
@@ -295,7 +294,7 @@ class SignalTriggerTestCase(TestCase):
         self.conversation = Conversation.objects.create(
             agent=self.agent,
             user=self.user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
 
         # Ensure signals are connected
@@ -356,7 +355,7 @@ class CeleryTaskTestCase(TestCase):
         self.conversation = Conversation.objects.create(
             agent=self.agent,
             user=self.user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
 
         disconnect_analytics_signals()

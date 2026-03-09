@@ -21,6 +21,7 @@ const METRICS = [
   { value: "toxicity_mean", label: "Toxicity" },
   { value: "resolution_quality_mean", label: "Resolution Quality" },
   // Business / operational
+  { value: "conversation_count", label: "Conversation Volume" },
   { value: "answer_failure_rate", label: "Answer Failure Rate" },
   { value: "knowledge_gap_rate", label: "Knowledge Gap Rate" },
   { value: "user_satisfaction_score", label: "User Satisfaction" },
@@ -38,7 +39,7 @@ const METRIC_GROUPS = [
   },
   {
     label: "Business",
-    metrics: ["answer_failure_rate", "knowledge_gap_rate", "user_satisfaction_score", "user_abandonment", "session_depth", "product_surface_mean", "response_latency_mean", "composite_quality"],
+    metrics: ["conversation_count", "answer_failure_rate", "knowledge_gap_rate", "user_satisfaction_score", "user_abandonment", "session_depth", "product_surface_mean", "response_latency_mean", "composite_quality"],
   },
 ];
 
@@ -53,9 +54,11 @@ interface TooltipState {
 interface SVGLineChartProps {
   data: TimeSeriesPoint[];
   isRawValue?: boolean;
+  selectedDate?: string | null;
+  onDateSelect?: (date: string) => void;
 }
 
-function SVGLineChart({ data, isRawValue = false }: SVGLineChartProps) {
+function SVGLineChart({ data, isRawValue = false, selectedDate, onDateSelect }: SVGLineChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
@@ -214,19 +217,23 @@ function SVGLineChart({ data, isRawValue = false }: SVGLineChartProps) {
         )}
 
         {/* Data points */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={4}
-            fill="hsl(221.2 83.2% 53.3%)"
-            stroke="white"
-            strokeWidth={1.5}
-            style={{ cursor: "pointer" }}
-            onMouseEnter={() => handleMouseEnter(p)}
-          />
-        ))}
+        {points.map((p, i) => {
+          const isSelected = selectedDate === p.date;
+          return (
+            <circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r={isSelected ? 6 : 4}
+              fill={isSelected ? "hsl(38 92% 50%)" : "hsl(221.2 83.2% 53.3%)"}
+              stroke="white"
+              strokeWidth={isSelected ? 2 : 1.5}
+              style={{ cursor: onDateSelect ? "pointer" : "default" }}
+              onMouseEnter={() => handleMouseEnter(p)}
+              onClick={() => onDateSelect?.(p.date)}
+            />
+          );
+        })}
 
         {/* Tooltip */}
         {tooltip && (
@@ -275,13 +282,16 @@ function SVGLineChart({ data, isRawValue = false }: SVGLineChartProps) {
 
 interface TimeSeriesSectionProps {
   filters: AnalyticsFilters;
+  refreshKey?: number;
+  selectedDate?: string | null;
+  onDateSelect?: (date: string) => void;
 }
 
 // Metrics that are NOT 0-1 percentages and should be displayed as raw numbers
-const RAW_VALUE_METRICS = new Set(["session_depth", "response_latency_mean"]);
+const RAW_VALUE_METRICS = new Set(["session_depth", "response_latency_mean", "conversation_count"]);
 
-export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
-  const [metric, setMetric] = useState<string>("answer_relevance_mean");
+export function TimeSeriesSection({ filters, refreshKey, selectedDate, onDateSelect }: TimeSeriesSectionProps) {
+  const [metric, setMetric] = useState<string>("conversation_count");
   const [data, setData] = useState<TimeSeriesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -302,7 +312,7 @@ export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
         setError(err?.message ?? "Failed to load time series data");
         setLoading(false);
       });
-  }, [metric, filters.start_date, filters.end_date, filters.agent_id]);
+  }, [metric, filters.start_date, filters.end_date, filters.agent_id, refreshKey]);
 
   const metricLabel = METRICS.find((m) => m.value === metric)?.label ?? metric;
   const isRawValue = RAW_VALUE_METRICS.has(metric);
@@ -344,7 +354,25 @@ export function TimeSeriesSection({ filters }: TimeSeriesSectionProps) {
           ) : error ? (
             <p className="text-sm text-destructive py-8 text-center">{error}</p>
           ) : (
-            <SVGLineChart data={data?.data ?? []} isRawValue={isRawValue} />
+            <>
+              <SVGLineChart
+                data={data?.data ?? []}
+                isRawValue={isRawValue}
+                selectedDate={selectedDate}
+                onDateSelect={onDateSelect}
+              />
+              {selectedDate && onDateSelect && (
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Click a point to drill into conversations for that day.{" "}
+                  <button
+                    className="underline hover:text-foreground"
+                    onClick={() => onDateSelect?.("")}
+                  >
+                    Clear selection
+                  </button>
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

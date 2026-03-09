@@ -84,6 +84,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -310,7 +311,7 @@ ANALYTICS_CONFIG = {
 
     # Sampling rate for LLM judges (0.0 to 1.0)
     # Only evaluate this % of messages with LLM judges to control costs
-    "llm_sampling_rate": 0.1,
+    "llm_sampling_rate": 1.0,
 
     # Async evaluation (run via Celery)
     # Set to False for synchronous evaluation (useful for testing)

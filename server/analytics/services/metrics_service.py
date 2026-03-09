@@ -53,7 +53,7 @@ class MetricsService:
         Returns:
             List of created TurnMetric instances
         """
-        if message.role != 'assistant':
+        if message.role not in ('assistant', 'ai'):
             # Only evaluate assistant messages
             return []
 
@@ -171,7 +171,7 @@ class MetricsService:
                     agent_id=agent.id,
                     agent_version=agent.version,
                     model=agent.config.get('model', {}).get('name', ''),
-                    timestamp=conversation.created_at
+                    timestamp=conversation.started_at
                 )
 
                 results.append(session_metric)
@@ -183,9 +183,7 @@ class MetricsService:
                 {'role': msg.role, 'text': msg.text}
                 for msg in messages
             ],
-            'duration_seconds': (
-                conversation.updated_at - conversation.created_at
-            ).total_seconds() if conversation.updated_at else 0,
+            'duration_seconds': 0,
             'turn_metrics': self._get_turn_metrics_dict(conversation)
         }
 
@@ -210,7 +208,7 @@ class MetricsService:
                     agent_id=agent.id,
                     agent_version=agent.version,
                     model=agent.config.get('model', {}).get('name', ''),
-                    timestamp=conversation.created_at
+                    timestamp=conversation.started_at
                 )
 
                 results.append(session_metric)
@@ -273,6 +271,23 @@ class MetricsService:
                 }
             )
 
+            results.append(daily_metric)
+
+        # Add conversation_count: distinct conversations per agent/model for the day
+        conv_counts = session_metrics.values('agent_id', 'model').annotate(
+            conversation_count=Count('conversation_id', distinct=True)
+        )
+        for item in conv_counts:
+            daily_metric, created = DailyMetric.objects.update_or_create(
+                date=target_date,
+                metric_name='conversation_count',
+                agent_id=item['agent_id'],
+                model=item['model'],
+                defaults={
+                    'value': item['conversation_count'],
+                    'count': item['conversation_count'],
+                }
+            )
             results.append(daily_metric)
 
         return results
@@ -353,6 +368,9 @@ class MetricsService:
             ),
             'composite_quality': self._get_metric_avg(
                 filters, 'composite_quality'
+            ),
+            'resolution_quality': self._get_metric_avg(
+                filters, 'resolution_quality_mean'
             ),
             # ── Business / operational metrics ───────────────────────────────
             'answer_failure_rate': self._get_metric_avg(
@@ -520,8 +538,8 @@ class MetricsService:
         """
         # Build filters
         filters = Q(
-            created_at__gte=start_date,
-            created_at__lte=end_date
+            started_at__date__gte=start_date,
+            started_at__date__lte=end_date
         )
         if agent_id:
             filters &= Q(agent_id=agent_id)
@@ -529,7 +547,7 @@ class MetricsService:
         # Get conversations with metrics
         conversations = Conversation.objects.filter(filters).select_related(
             'agent', 'user'
-        ).prefetch_related('session_metrics').order_by('-created_at')[offset:offset + limit]
+        ).prefetch_related('session_metrics').order_by('-started_at')[offset:offset + limit]
 
         results = []
 

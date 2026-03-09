@@ -211,6 +211,7 @@ export type KPIData = {
   coherence: number | null;
   toxicity: number | null;
   composite_quality: number | null;
+  resolution_quality: number | null;
   // Business / operational metrics
   answer_failure_rate: number | null;
   knowledge_gap_rate: number | null;

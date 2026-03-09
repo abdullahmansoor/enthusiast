@@ -22,6 +22,7 @@ class KPISerializer(serializers.Serializer):
     coherence = serializers.FloatField(allow_null=True)
     toxicity = serializers.FloatField(allow_null=True)
     composite_quality = serializers.FloatField(allow_null=True)
+    resolution_quality = serializers.FloatField(allow_null=True, required=False)
 
     # Business / operational metrics
     answer_failure_rate = serializers.FloatField(allow_null=True, required=False)

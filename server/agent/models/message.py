@@ -14,6 +14,8 @@ class Message(models.Model):
 
     answer_failed = models.BooleanField(default=False)
 
+    metadata = models.JSONField(default=dict, blank=True)
+
     class Meta:
         db_table_comment = (
             "A message sent during a conversation. Role describes category of a message, it may be "

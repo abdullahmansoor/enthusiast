@@ -48,8 +48,7 @@ class AnalyticsAPITestCase(TestCase):
 
         # Create dataset
         self.dataset = DataSet.objects.create(
-            name='Test Dataset',
-            description='Test dataset'
+            name='Test Dataset'
         )
 
         # Create agent
@@ -71,16 +70,22 @@ class AnalyticsAPITestCase(TestCase):
 
         self.service = MetricsService()
 
+        # Clear cache to avoid test bleed
+        from django.core.cache import cache
+        cache.clear()
+
     def tearDown(self):
         """Clean up"""
         reconnect_analytics_signals()
+        from django.core.cache import cache
+        cache.clear()
 
     def _create_conversation_with_metrics(self, agent, num_messages=2):
         """Helper to create conversation with messages and metrics"""
         conversation = Conversation.objects.create(
             agent=agent,
             user=self.user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
 
         for i in range(num_messages):
@@ -106,7 +111,7 @@ class AnalyticsAPITestCase(TestCase):
 
         # Rollup to daily
         today = date.today()
-        self.service.rollup_daily_metrics(today, agent_id=str(agent.id))
+        self.service.rollup_daily_metrics(today, agent_id=agent.id)
 
         return conversation
 
@@ -294,14 +299,14 @@ class AnalyticsAPITestCase(TestCase):
         conversation = self._create_conversation_with_metrics(self.agent)
 
         response = self.client.get(
-            f'/api/analytics/conversations/{conversation.id}/detail/'
+            f'/api/analytics/{conversation.id}/detail/'
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(data['conversation_id'], str(conversation.id))
-        self.assertEqual(data['agent_id'], str(self.agent.id))
+        self.assertEqual(data['conversation_id'], conversation.id)
+        self.assertEqual(data['agent_id'], self.agent.id)
         self.assertIn('messages', data)
         self.assertIn('session_metrics', data)
 
@@ -319,11 +324,11 @@ class AnalyticsAPITestCase(TestCase):
         other_conv = Conversation.objects.create(
             agent=self.other_agent,
             user=self.other_user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
 
         response = self.client.get(
-            f'/api/analytics/conversations/{other_conv.id}/detail/'
+            f'/api/analytics/{other_conv.id}/detail/'
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

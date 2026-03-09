@@ -33,7 +33,7 @@ def evaluate_message_task(message_id: int, stage: int = 3):
         message = Message.objects.get(id=message_id)
 
         # Only evaluate assistant messages
-        if message.role != 'assistant':
+        if message.role not in ('assistant', 'ai'):
             return {'message': 'Skipped: not an assistant message', 'metrics_computed': 0}
 
         service = MetricsService()
@@ -200,7 +200,7 @@ def backfill_metrics_task(
             for conversation in conversations:
                 try:
                     # Evaluate all messages in conversation
-                    for message in conversation.messages.filter(role='assistant'):
+                    for message in conversation.messages.filter(role__in=['assistant', 'ai']):
                         service.compute_turn_metrics(message, stage=max_stage)
 
                     # Compute session metrics

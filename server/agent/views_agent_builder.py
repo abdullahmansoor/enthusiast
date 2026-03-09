@@ -223,7 +223,7 @@ class AgentBuilderViewSet(viewsets.ModelViewSet):
         conversation_stats = Conversation.objects.filter(
             agent=agent
         ).aggregate(
-            total=Count('id'),
+            total=Count('id', distinct=True),
             total_messages=Count('messages')
         )
 

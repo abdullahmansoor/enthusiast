@@ -31,8 +31,7 @@ class AgentBuilderAPITestCase(TestCase):
         )
 
         self.dataset = DataSet.objects.create(
-            name='Test Dataset',
-            description='Test dataset for agents'
+            name='Test Dataset'
         )
 
         self.client = APIClient()
@@ -113,7 +112,7 @@ class AgentBuilderAPITestCase(TestCase):
         response = self.client.get('/api/agents-builder/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data['count'], 2)
 
     def test_get_agent_detail(self):
         """Test getting agent details"""
@@ -236,7 +235,7 @@ class AgentBuilderAPITestCase(TestCase):
             Conversation.objects.create(
                 agent=agent,
                 user=self.user,
-                dataset=self.dataset
+                data_set=self.dataset
             )
 
         response = self.client.get(f'/api/agents-builder/{agent.id}/conversations/')
@@ -256,7 +255,7 @@ class AgentBuilderAPITestCase(TestCase):
         conversation = Conversation.objects.create(
             agent=agent,
             user=self.user,
-            dataset=self.dataset
+            data_set=self.dataset
         )
         Message.objects.create(
             conversation=conversation,
@@ -322,8 +321,8 @@ class AgentBuilderAPITestCase(TestCase):
 
         # Current user should only see their agent
         response = self.client.get('/api/agents-builder/')
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'My Agent')
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['name'], 'My Agent')
 
         # Current user should not be able to access other user's agent
         response = self.client.get(f'/api/agents-builder/{other_agent.id}/')

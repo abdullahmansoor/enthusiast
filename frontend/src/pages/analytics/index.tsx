@@ -35,8 +35,10 @@ export function AnalyticsDashboardPage() {
   const today = formatDate(new Date());
   const [startDate, setStartDate] = useState<string>(subtractDays(30));
   const [endDate, setEndDate] = useState<string>(today);
-  const [agentId, setAgentId] = useState<string>("");
+  const [agentId, setAgentId] = useState<string>("all");
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Load agents for filter dropdown
   useEffect(() => {
@@ -44,10 +46,21 @@ export function AnalyticsDashboardPage() {
     api.analytics().getAgentsForFilter().then(setAgents).catch(() => {});
   }, []);
 
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshKey((k) => k + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clear drill-down when filters change
+  useEffect(() => {
+    setSelectedDate(null);
+  }, [startDate, endDate, agentId]);
+
   const filters: AnalyticsFilters = {
     start_date: startDate || undefined,
     end_date: endDate || undefined,
-    agent_id: agentId || undefined,
+    agent_id: agentId === "all" ? undefined : agentId,
   };
 
   function applyPreset(days: number) {
@@ -93,7 +106,7 @@ export function AnalyticsDashboardPage() {
               <SelectValue placeholder="All agents" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All agents</SelectItem>
+              <SelectItem value="all">All agents</SelectItem>
               {agents.map((a) => (
                 <SelectItem key={a.id} value={String(a.id)}>
                   {a.name}
@@ -114,13 +127,28 @@ export function AnalyticsDashboardPage() {
             Last 90d
           </Button>
         </div>
+
+        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          Auto-refreshes every 60s
+        </div>
       </div>
 
       <div className="space-y-8">
-        <KPISection filters={filters} />
-        <BusinessInsightsSection filters={filters} />
-        <TimeSeriesSection filters={filters} />
-        <ConversationsSection filters={filters} />
+        <KPISection filters={filters} refreshKey={refreshKey} />
+        <BusinessInsightsSection filters={filters} refreshKey={refreshKey} />
+        <TimeSeriesSection
+          filters={filters}
+          refreshKey={refreshKey}
+          selectedDate={selectedDate}
+          onDateSelect={(d) => setSelectedDate(d || null)}
+        />
+        <ConversationsSection
+          filters={filters}
+          refreshKey={refreshKey}
+          selectedDate={selectedDate}
+          onClearDate={() => setSelectedDate(null)}
+        />
       </div>
     </PageMain>
   );

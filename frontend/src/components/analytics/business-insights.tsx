@@ -158,10 +158,11 @@ interface QualityGaugeProps {
   compositeQuality: number | null;
   userSatisfaction: number | null;
   answerRelevance: number | null;
+  resolutionQuality: number | null;
   knowledgeGapRate: number | null;
 }
 
-function QualityGauge({ compositeQuality, userSatisfaction, answerRelevance, knowledgeGapRate }: QualityGaugeProps) {
+function QualityGauge({ compositeQuality, userSatisfaction, answerRelevance, resolutionQuality, knowledgeGapRate }: QualityGaugeProps) {
   const items = [
     {
       label: "Composite Quality",
@@ -177,6 +178,11 @@ function QualityGauge({ compositeQuality, userSatisfaction, answerRelevance, kno
       label: "Answer Relevance",
       value: answerRelevance,
       description: "LLM-judged relevance to question",
+    },
+    {
+      label: "Resolution Quality",
+      value: resolutionQuality,
+      description: "Did it actually solve the need?",
     },
     {
       label: "Knowledge Gap Rate",
@@ -223,9 +229,10 @@ function QualityGauge({ compositeQuality, userSatisfaction, answerRelevance, kno
 
 interface BusinessInsightsSectionProps {
   filters: AnalyticsFilters;
+  refreshKey?: number;
 }
 
-export function BusinessInsightsSection({ filters }: BusinessInsightsSectionProps) {
+export function BusinessInsightsSection({ filters, refreshKey }: BusinessInsightsSectionProps) {
   const [data, setData] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,7 +253,7 @@ export function BusinessInsightsSection({ filters }: BusinessInsightsSectionProp
         setError(err?.message ?? "Failed to load business insights");
         setLoading(false);
       });
-  }, [filters.start_date, filters.end_date, filters.agent_id]);
+  }, [filters.start_date, filters.end_date, filters.agent_id, refreshKey]);
 
   if (loading) {
     return (
@@ -351,6 +358,7 @@ export function BusinessInsightsSection({ filters }: BusinessInsightsSectionProp
               compositeQuality={data?.composite_quality ?? null}
               userSatisfaction={data?.user_satisfaction_score ?? null}
               answerRelevance={data?.answer_relevance ?? null}
+              resolutionQuality={data?.resolution_quality ?? null}
               knowledgeGapRate={data?.knowledge_gap_rate ?? null}
             />
           </CardContent>

@@ -92,7 +92,7 @@ export class AnalyticsApiClient extends BaseApiClient {
 
   async getConversationDetail(conversationId: string): Promise<SessionDetail> {
     const response = await fetch(
-      `${this.apiBase}/api/analytics/conversations/${conversationId}/detail/`,
+      `${this.apiBase}/api/analytics/${conversationId}/detail/`,
       this._requestConfiguration()
     );
     if (!response.ok) throw new Error(`Session detail failed: ${response.statusText}`);
@@ -114,7 +114,7 @@ export class AnalyticsApiClient extends BaseApiClient {
 
   async getAgentsForFilter(): Promise<{ id: number; name: string }[]> {
     const response = await fetch(
-      `${this.apiBase}/api/agents/`,
+      `${this.apiBase}/api/agents-builder/`,
       this._requestConfiguration()
     );
     if (!response.ok) return [];

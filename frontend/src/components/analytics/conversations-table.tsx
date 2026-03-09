@@ -75,9 +75,12 @@ function TableRowSkeleton() {
 
 interface ConversationsSectionProps {
   filters: AnalyticsFilters;
+  refreshKey?: number;
+  selectedDate?: string | null;
+  onClearDate?: () => void;
 }
 
-export function ConversationsSection({ filters }: ConversationsSectionProps) {
+export function ConversationsSection({ filters, refreshKey, selectedDate, onClearDate }: ConversationsSectionProps) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ConversationListData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,10 +88,15 @@ export function ConversationsSection({ filters }: ConversationsSectionProps) {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Narrow filters to the selected date if drilled down
+  const activeFilters: AnalyticsFilters = selectedDate
+    ? { ...filters, start_date: selectedDate, end_date: selectedDate }
+    : filters;
+
   useEffect(() => {
     // Reset to page 1 when filters change
     setPage(1);
-  }, [filters.start_date, filters.end_date, filters.agent_id]);
+  }, [filters.start_date, filters.end_date, filters.agent_id, selectedDate]);
 
   useEffect(() => {
     const api = new ApiClient(authenticationProviderInstance);
@@ -97,7 +105,7 @@ export function ConversationsSection({ filters }: ConversationsSectionProps) {
 
     api
       .analytics()
-      .getConversations({ ...filters, page, page_size: PAGE_SIZE })
+      .getConversations({ ...activeFilters, page, page_size: PAGE_SIZE })
       .then((result) => {
         setData(result);
         setLoading(false);
@@ -106,7 +114,7 @@ export function ConversationsSection({ filters }: ConversationsSectionProps) {
         setError(err?.message ?? "Failed to load conversations");
         setLoading(false);
       });
-  }, [page, filters.start_date, filters.end_date, filters.agent_id]);
+  }, [page, filters.start_date, filters.end_date, filters.agent_id, selectedDate, refreshKey]);
 
   function handleViewDetail(id: string) {
     setSelectedConversationId(id);
@@ -117,7 +125,20 @@ export function ConversationsSection({ filters }: ConversationsSectionProps) {
 
   return (
     <section>
-      <h2 className="text-base font-semibold mb-4">Conversations</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold">Conversations</h2>
+        {selectedDate && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Filtered to <strong className="text-foreground">{selectedDate}</strong></span>
+            <button
+              onClick={onClearDate}
+              className="text-xs underline hover:text-foreground"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
 
       {error ? (
         <p className="text-sm text-destructive">{error}</p>

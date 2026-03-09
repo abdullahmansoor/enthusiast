@@ -17,11 +17,11 @@ from django.conf import settings
 
 from analytics.evaluators.registry import registry, MetricDefinition
 
-# Get OpenAI API key from settings
-OPENAI_API_KEY = getattr(settings, 'OPENAI_API_KEY', None)
+# Get analytics config and OpenAI API key from settings
+ANALYTICS_CONFIG = getattr(settings, 'ANALYTICS_CONFIG', {})
+OPENAI_API_KEY = ANALYTICS_CONFIG.get('openai_api_key') or getattr(settings, 'OPENAI_API_KEY', None)
 
 # Get sampling rate from settings (default 10%)
-ANALYTICS_CONFIG = getattr(settings, 'ANALYTICS_CONFIG', {})
 LLM_SAMPLING_RATE = ANALYTICS_CONFIG.get('llm_sampling_rate', 0.1)
 
 
@@ -198,35 +198,228 @@ def compute_composite_quality(session_data: Dict[str, Any]) -> float:
     if not turn_metrics:
         return 0.5
 
-    # Weights for each metric
+    # Weights: business outcomes weighted higher than proxy quality metrics.
+    # Positive weights → higher is better.
+    # Negative weights → metric penalises score when high.
     weights = {
-        'answer_relevance': 0.4,
-        'faithfulness': 0.3,
-        'coherence': 0.2,
-        'toxicity': -0.1,  # Negative weight (lower is better)
+        'answer_relevance': 0.25,
+        'faithfulness': 0.15,
+        'coherence': 0.10,
+        'toxicity': -0.10,          # penalty: higher toxicity → lower score
+        'answer_failed': -0.20,     # penalty: failures directly hurt reliability
+        'knowledge_gap': -0.10,     # penalty: gaps mean users can't get answers
+        'user_rating': 0.10,        # bonus: direct customer signal (sparse but strong)
     }
 
-    total_weight = 0
+    total_abs_weight = 0
     weighted_sum = 0
 
     for metric_name, weight in weights.items():
-        if metric_name in turn_metrics:
-            values = turn_metrics[metric_name]
-            if values:
-                avg_value = sum(values) / len(values)
-                weighted_sum += weight * avg_value
-                total_weight += abs(weight)
+        values = [v for v in turn_metrics.get(metric_name, []) if v >= 0]
+        if values:
+            avg_value = sum(values) / len(values)
+            weighted_sum += weight * avg_value
+            total_abs_weight += abs(weight)
 
-    if total_weight == 0:
+    if total_abs_weight == 0:
         return 0.5
 
-    # Normalize to [0, 1]
-    composite = weighted_sum / total_weight
-
-    # Handle toxicity (which was negative)
-    composite = (composite + 1) / 2 if any(w < 0 for w in weights.values()) else composite
+    # Normalise: shift from [-1,1]-ish space to [0,1]
+    raw = weighted_sum / total_abs_weight
+    composite = (raw + 1.0) / 2.0
 
     return max(0.0, min(1.0, composite))
+
+
+# Intent label → numeric encoding (stable mapping for storage as float)
+INTENT_LABELS = [
+    'product_search',       # 0
+    'price_inquiry',        # 1
+    'availability_check',   # 2
+    'how_to_use',           # 3
+    'support_complaint',    # 4
+    'comparison',           # 5
+    'general',              # 6
+]
+INTENT_TO_FLOAT = {label: float(i) for i, label in enumerate(INTENT_LABELS)}
+
+
+def compute_intent_classification(turn_data: Dict[str, Any]) -> float:
+    """
+    Classify the user query intent using GPT-4o-mini.
+
+    Intent types (encoded as float index):
+    - 0: product_search   — "show me running shoes under $100"
+    - 1: price_inquiry    — "how much does X cost"
+    - 2: availability_check — "do you have X in stock"
+    - 3: how_to_use       — "how do I set up X"
+    - 4: support_complaint — "my order hasn't arrived"
+    - 5: comparison       — "what's the difference between X and Y"
+    - 6: general          — anything else
+
+    This is the highest-value business intelligence metric: it tells you
+    what customers actually want, enabling product and content decisions.
+
+    Args:
+        turn_data: Dictionary with 'user_text' key
+
+    Returns:
+        Float index of classified intent, or -1.0 if not sampled / unavailable
+    """
+    if not should_sample():
+        return -1.0
+
+    user_text = turn_data.get('user_text', '').strip()
+    if not user_text:
+        return INTENT_TO_FLOAT['general']
+
+    prompt = f"""Classify the following customer message into exactly one intent category.
+
+Customer message: "{user_text}"
+
+Categories:
+- product_search: looking for products, browsing, discovery
+- price_inquiry: asking about cost or pricing
+- availability_check: asking if something is in stock or available
+- how_to_use: asking how to use, install, or operate something
+- support_complaint: reporting an issue, complaint, or problem
+- comparison: comparing two or more products or options
+- general: anything that doesn't fit the above
+
+Respond with ONLY a JSON object in this exact format:
+{{"intent": "product_search", "confidence": 0.9}}"""
+
+    try:
+        messages = [
+            {"role": "system", "content": "You are a customer intent classifier. Be consistent and objective."},
+            {"role": "user", "content": prompt}
+        ]
+        response_text = call_openai(messages, temperature=0.0, max_tokens=60)
+        result = json.loads(response_text)
+        intent = result.get('intent', 'general')
+        return INTENT_TO_FLOAT.get(intent, INTENT_TO_FLOAT['general'])
+
+    except Exception as e:
+        print(f"Error in intent_classification: {e}")
+        return INTENT_TO_FLOAT['general']
+
+
+def compute_resolution_quality(turn_data: Dict[str, Any]) -> float:
+    """
+    Evaluate whether the agent's response actually resolves the user's need,
+    beyond surface-level relevance.
+
+    This is a deeper quality signal than answer_relevance:
+    - answer_relevance asks "did the response address the question?"
+    - resolution_quality asks "did it *solve* the problem / meet the need?"
+
+    For product queries: did the agent recommend something actionable?
+    For support: did the agent provide a clear resolution path?
+
+    Args:
+        turn_data: Dictionary with 'user_text', 'assistant_text', 'context' keys
+
+    Returns:
+        Resolution quality score (0.0 = unresolved, 1.0 = fully resolved),
+        or -1.0 if not sampled
+    """
+    if not should_sample():
+        return -1.0
+
+    user_text = turn_data.get('user_text', '')
+    assistant_text = turn_data.get('assistant_text', '')
+
+    if not user_text or not assistant_text:
+        return 0.5
+
+    prompt = f"""Evaluate whether the assistant's response fully resolves the customer's need.
+
+Customer message: {user_text}
+
+Assistant response: {assistant_text}
+
+Score from 0.0 to 1.0:
+- 1.0: Fully resolved — customer can take a clear next step based on this response
+- 0.7: Mostly resolved — useful but missing a detail
+- 0.4: Partially resolved — addresses topic but doesn't solve the need
+- 0.1: Not resolved — off-topic, vague, or explicitly says it can't help
+- 0.0: Harmful / misleading response
+
+Respond with ONLY a JSON object:
+{{"resolution": 0.85, "reasoning": "brief explanation"}}"""
+
+    try:
+        messages = [
+            {"role": "system", "content": "You are evaluating whether AI assistant responses actually solve customer problems. Focus on actionability and completeness."},
+            {"role": "user", "content": prompt}
+        ]
+        response_text = call_openai(messages, temperature=0.0, max_tokens=150)
+        result = json.loads(response_text)
+        score = float(result.get('resolution', 0.5))
+        return max(0.0, min(1.0, score))
+
+    except Exception as e:
+        print(f"Error in resolution_quality: {e}")
+        return 0.5
+
+
+def compute_knowledge_gap_llm(turn_data: Dict[str, Any]) -> float:
+    """
+    Use an LLM to detect whether the agent failed to answer due to a knowledge gap,
+    even when the response doesn't use explicit "I don't know" phrasing.
+
+    More robust than regex-based detection which misses:
+    - Vague / deflecting responses ("That's a great question...")
+    - Partial answers that dodge the core query
+    - Responses that hallucinate rather than admitting gaps
+
+    Args:
+        turn_data: Dictionary with 'user_text' and 'assistant_text' keys
+
+    Returns:
+        Probability of knowledge gap (0.0 = full answer, 1.0 = clear gap),
+        or -1.0 if not sampled
+    """
+    if not should_sample():
+        return -1.0
+
+    user_text = turn_data.get('user_text', '')
+    assistant_text = turn_data.get('assistant_text', '')
+
+    if not user_text or not assistant_text:
+        return 0.5
+
+    prompt = f"""Determine whether the assistant's response indicates a knowledge gap — i.e., the agent
+lacked information to properly answer the customer's question.
+
+Signs of a knowledge gap:
+- Explicitly says it doesn't have information
+- Gives a vague/deflecting answer that avoids the actual question
+- Recommends contacting someone else without answering
+- The answer is clearly off-topic or hallucinated
+
+Customer question: {user_text}
+
+Assistant response: {assistant_text}
+
+Respond with ONLY a JSON object:
+{{"knowledge_gap": 0.1, "reasoning": "brief explanation"}}
+
+Where 0.0 = no gap (response fully answered), 1.0 = clear knowledge gap."""
+
+    try:
+        messages = [
+            {"role": "system", "content": "You are evaluating whether AI assistants have the knowledge to answer customer questions. Be strict about gaps and deflections."},
+            {"role": "user", "content": prompt}
+        ]
+        response_text = call_openai(messages, temperature=0.0, max_tokens=150)
+        result = json.loads(response_text)
+        score = float(result.get('knowledge_gap', 0.0))
+        return max(0.0, min(1.0, score))
+
+    except Exception as e:
+        print(f"Error in knowledge_gap_llm: {e}")
+        return 0.0
 
 
 # Register metrics
@@ -255,4 +448,43 @@ registry.register(MetricDefinition(
     level='session',
     stage=3,
     reduce_session=compute_composite_quality
+))
+
+registry.register(MetricDefinition(
+    name='intent_classification',
+    display_name='Query Intent Type',
+    description=(
+        'Classified user intent (encoded as float index): '
+        '0=product_search, 1=price_inquiry, 2=availability_check, '
+        '3=how_to_use, 4=support_complaint, 5=comparison, 6=general'
+    ),
+    level='turn',
+    stage=3,
+    compute_turn=compute_intent_classification
+))
+
+registry.register(MetricDefinition(
+    name='resolution_quality',
+    display_name='Resolution Quality (LLM-judged)',
+    description=(
+        'Whether the response fully resolves the customer need — '
+        'goes deeper than relevance by asking "did it actually solve the problem?" '
+        '(0=unresolved, 1=fully resolved)'
+    ),
+    level='turn',
+    stage=3,
+    compute_turn=compute_resolution_quality
+))
+
+registry.register(MetricDefinition(
+    name='knowledge_gap_llm',
+    display_name='Knowledge Gap (LLM-judged)',
+    description=(
+        'LLM-detected probability that the agent lacked information to answer. '
+        'More robust than regex: catches vague/deflecting responses. '
+        '(0=fully answered, 1=clear gap)'
+    ),
+    level='turn',
+    stage=3,
+    compute_turn=compute_knowledge_gap_llm
 ))

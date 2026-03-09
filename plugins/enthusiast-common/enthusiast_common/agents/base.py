@@ -69,5 +69,5 @@ class BaseAgent(ABC, ExtraArgsClassBase):
                 continue
             setattr(self, key.upper(), field(**value))
         if tools_runtime_arguments:
-            for index, tool in enumerate(self._tools):
-                tool.set_runtime_arguments(tools_runtime_arguments[index])
+            for tool, tool_args in zip(self._tools, tools_runtime_arguments):
+                tool.set_runtime_arguments(tool_args)
