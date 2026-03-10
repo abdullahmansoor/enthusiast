@@ -264,6 +264,15 @@ if CELERY_BROKER_URL.startswith("rediss://"):
 CELERY_TIMEZONE = env.str("ECL_CELERY_TIMEZONE")
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env.str("ECL_CELERY_BROKER_URL", "redis://redis:6379/0"),
+        "KEY_PREFIX": "enthusiast",
+        "TIMEOUT": 300,
+    }
+}
+
 CATALOG_LANGUAGE_MODEL_PROVIDERS = {
     "OpenAI": "enthusiast_model_openai.OpenAILanguageModelProvider",
 }

@@ -23,3 +23,15 @@ CATALOG_DOCUMENT_SOURCE_PLUGINS = {
     "Sample Document Source": "enthusiast_source_sample.SampleDocumentSource",
     "Dermlax Document Source": "enthusiast_source_dermlax.DermlaxDocumentSource",
 }
+
+import environ as _env
+_e = _env.Env()
+ANALYTICS_CONFIG = {
+    "enable_local_models": False,  # detoxify/sentence-transformers not installed
+    "enable_llm_judges": True,
+    "llm_sampling_rate": 1.0,
+    "async_evaluation": True,
+    "openai_api_key": _e.str("OPENAI_API_KEY", ""),
+    "llm_judge_model": "gpt-4o-mini",
+    "llm_judge_temperature": 0.0,
+}

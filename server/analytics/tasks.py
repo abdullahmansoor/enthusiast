@@ -184,8 +184,8 @@ def backfill_metrics_task(
 
             # Get conversations in date range
             conversations = Conversation.objects.filter(
-                created_at__date__gte=start_date_obj,
-                created_at__date__lte=end_date_obj
+                started_at__date__gte=start_date_obj,
+                started_at__date__lte=end_date_obj
             )
 
             if agent_id:

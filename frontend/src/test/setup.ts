@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 
 // Polyfill fetch for jsdom
-import { vi } from "vitest";
+import { vi, beforeAll, afterAll } from "vitest";
 
 // Silence console.error for expected validation errors in tests
 const originalError = console.error;

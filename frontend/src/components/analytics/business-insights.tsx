@@ -234,6 +234,7 @@ interface BusinessInsightsSectionProps {
 
 export function BusinessInsightsSection({ filters, refreshKey }: BusinessInsightsSectionProps) {
   const [data, setData] = useState<KPIData | null>(null);
+  const [intentDist, setIntentDist] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -242,11 +243,13 @@ export function BusinessInsightsSection({ filters, refreshKey }: BusinessInsight
     setLoading(true);
     setError(null);
 
-    api
-      .analytics()
-      .getOverview(filters)
-      .then((kpi) => {
+    Promise.all([
+      api.analytics().getOverview(filters),
+      api.analytics().getIntentDistribution(filters),
+    ])
+      .then(([kpi, dist]) => {
         setData(kpi);
+        setIntentDist(dist);
         setLoading(false);
       })
       .catch((err) => {
@@ -337,11 +340,7 @@ export function BusinessInsightsSection({ filters, refreshKey }: BusinessInsight
             </p>
           </CardHeader>
           <CardContent>
-            <IntentDistributionChart distribution={{}} />
-            <p className="text-xs text-muted-foreground mt-3">
-              Intent breakdown requires <code>intent_classification</code> metric data to accumulate.
-              Enable Stage 3 evaluation and increase the sampling rate to populate this chart.
-            </p>
+            <IntentDistributionChart distribution={intentDist} />
           </CardContent>
         </Card>
 

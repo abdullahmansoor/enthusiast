@@ -92,11 +92,40 @@ export class AnalyticsApiClient extends BaseApiClient {
 
   async getConversationDetail(conversationId: string): Promise<SessionDetail> {
     const response = await fetch(
-      `${this.apiBase}/api/analytics/${conversationId}/detail/`,
+      `${this.apiBase}/api/analytics/conversations/${conversationId}/detail/`,
       this._requestConfiguration()
     );
     if (!response.ok) throw new Error(`Session detail failed: ${response.statusText}`);
     return response.json() as Promise<SessionDetail>;
+  }
+
+  async getIntentDistribution(filters: AnalyticsFilters): Promise<Record<string, number>> {
+    const qs = this.buildQuery({
+      metric_name: "intent_classification",
+      start_date: filters.start_date,
+      end_date: filters.end_date,
+      ...(filters.agent_id ? { agent_id: filters.agent_id } : {}),
+    });
+    const response = await fetch(
+      `${this.apiBase}/api/analytics/distribution/?${qs}`,
+      this._requestConfiguration()
+    );
+    if (!response.ok) return {};
+    const data = await response.json() as { values?: number[] };
+    if (!data.values || data.values.length === 0) return {};
+    // Count occurrences of each intent index (0-6)
+    const counts: Record<string, number> = {};
+    for (const v of data.values) {
+      const key = String(Math.round(v));
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    // Normalise to fractions
+    const total = data.values.length;
+    const dist: Record<string, number> = {};
+    for (const [k, c] of Object.entries(counts)) {
+      dist[k] = c / total;
+    }
+    return dist;
   }
 
   async getMetricsCatalog(filters: { level?: string; stage?: number } = {}): Promise<MetricDefinition[]> {

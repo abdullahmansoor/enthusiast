@@ -50,9 +50,13 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
         self.service = MetricsService()
 
     def _get_user_agents(self):
-        """Get all agents owned by the current user."""
+        """Get all agents accessible to the current user via their datasets."""
+        from catalog.models import DataSet
+        user_dataset_ids = DataSet.objects.filter(
+            users=self.request.user
+        ).values_list('id', flat=True)
         return Agent.objects.filter(
-            created_by=self.request.user,
+            dataset_id__in=user_dataset_ids,
             deleted_at__isnull=True
         )
 
@@ -381,8 +385,12 @@ class AnalyticsDashboardViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Validate access
-        if conversation.agent.created_by != request.user:
+        # Validate access — check via dataset membership
+        from catalog.models import DataSet
+        user_dataset_ids = DataSet.objects.filter(
+            users=request.user
+        ).values_list('id', flat=True)
+        if conversation.data_set_id not in list(user_dataset_ids):
             return Response(
                 {'error': 'Access denied'},
                 status=status.HTTP_403_FORBIDDEN

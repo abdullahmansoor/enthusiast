@@ -484,8 +484,23 @@ class MetricsService:
             SessionMetric.objects.filter(filters).values_list('value', flat=True)
         )
 
+        # For turn-level-only metrics (e.g. intent_classification), fall back to TurnMetric
         if not values:
-            return {'stats': {}, 'values': []}
+            turn_filters = Q(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                metric_name=metric_name
+            )
+            if agent_id:
+                turn_filters &= Q(agent_id=agent_id)
+            values = list(
+                TurnMetric.objects.filter(turn_filters)
+                .exclude(value__lt=0)  # exclude -1.0 (not sampled)
+                .values_list('value', flat=True)
+            )
+
+        if not values:
+            return {'stats': None, 'values': []}
 
         # Compute stats
         import numpy as np

@@ -1,7 +1,7 @@
+import json
 import logging
 
 import tiktoken
-from django.core import serializers
 from enthusiast_common.injectors import BaseInjector
 from enthusiast_common.tools import BaseLLMTool
 from langchain_core.language_models import BaseLanguageModel
@@ -13,23 +13,25 @@ logger = logging.getLogger(__name__)
 CREATE_CONTENT_PROMPT_TEMPLATE = """
     You're supporting a sales agent or a customer support representative, in answering questions they get from the customers.
 
-    Based on the following documents delimited by three backticks
-    ```
+    Based on the following documents:
+    <documents>
     {document_context}
-    ```
-    and the following products delimited by three backticks
-    ```
-    {product_context}
-    ```
-    respond to the following user request delimited by three backticks
-    ```
-    {query}
-    ```
-    Be concise and make sure that the response is to the point. Don't include unnecessary information.
-    If a product is found, always include its name, price, and category even if the description is sparse.
+    </documents>
 
-    IMPORTANT: If the documents and products lists are completely empty, clearly state that you don't have
-    information to answer this question based on the available knowledge base.
+    And the following products available in the catalog:
+    <products>
+    {product_context}
+    </products>
+
+    Respond to the following user request:
+    <user_request>
+    {query}
+    </user_request>
+
+    Be concise and make sure that the response is to the point. Don't include unnecessary information.
+    If products are found in the <products> section, always include their name, price, and category in your response even if the description is sparse.
+
+    IMPORTANT: Only state that you don't have information if BOTH the <documents> and <products> sections are completely empty (empty list []).
 """
 
 
@@ -99,15 +101,51 @@ class CreateAnswerTool(BaseLLMTool):
         return document_context
 
     def run(self, full_user_request: str):
+        logger.info(f"[CreateAnswerTool] ── Query: '{full_user_request}'")
+
         document_retriever = self.injector.document_retriever
         product_retriever = self.injector.product_retriever
-        relevant_documents = document_retriever.find_content_matching_query(full_user_request)
-        relevant_products = product_retriever.find_products_matching_query(full_user_request)
 
-        # Log retrieval stats for debugging
-        logger.info(f"Retrieved {len(relevant_documents)} document chunks and {len(relevant_products)} products for query")
+        try:
+            relevant_documents = document_retriever.find_content_matching_query(full_user_request)
+            # Materialise the queryset so we can inspect it
+            relevant_documents = list(relevant_documents)
+            logger.info(f"[CreateAnswerTool] Document retrieval → {len(relevant_documents)} chunks")
+            for i, doc in enumerate(relevant_documents[:3]):
+                logger.info(f"[CreateAnswerTool]   doc[{i}]: '{str(doc.content)[:120]}'")
+        except Exception as exc:
+            logger.error(f"[CreateAnswerTool] Document retrieval FAILED ({type(exc).__name__}): {exc}")
+            relevant_documents = []
 
-        product_context = serializers.serialize("json", relevant_products)
+        try:
+            relevant_products = product_retriever.find_products_matching_query(full_user_request)
+            logger.info(f"[CreateAnswerTool] Product retrieval → {len(relevant_products)} products")
+            for i, p in enumerate(relevant_products[:5]):
+                logger.info(f"[CreateAnswerTool]   product[{i}]: name='{p.name}' price={p.price} categories='{p.categories}'")
+        except Exception as exc:
+            logger.error(f"[CreateAnswerTool] Product retrieval FAILED ({type(exc).__name__}): {exc}")
+            relevant_products = []
+
+        product_context = json.dumps([
+            {
+                "name": p.name,
+                "price": p.price,
+                "description": p.description,
+                "categories": p.categories,
+                "sku": p.sku,
+            }
+            for p in relevant_products
+        ])
+
+        if not relevant_documents and not relevant_products:
+            logger.warning(
+                f"[CreateAnswerTool] ⚠ Both document and product contexts are EMPTY for query='{full_user_request}'"
+            )
+
+        logger.info(
+            f"[CreateAnswerTool] Context → docs={len(relevant_documents)} products={len(relevant_products)} "
+            f"product_ctx={len(product_context)} chars"
+        )
 
         prompt = PromptTemplate.from_template(CREATE_CONTENT_PROMPT_TEMPLATE)
         chain = prompt | self.llm
@@ -116,13 +154,11 @@ class CreateAnswerTool(BaseLLMTool):
         while retry < self.MAX_RETRY:
             try:
                 retry += 1
-
                 document_context = self._get_document_context(relevant_documents, retry)
-
-                # Log context sizes for debugging
-                if retry == 0:
-                    logger.info(f"Document context length: {len(document_context)} chars, Product context length: {len(product_context)} chars")
-
+                logger.info(
+                    f"[CreateAnswerTool] LLM invoke attempt {retry} — "
+                    f"doc_ctx={len(document_context)} chars, product_ctx={len(product_context)} chars"
+                )
                 llm_result = chain.invoke(
                     {
                         "query": full_user_request,
@@ -130,10 +166,15 @@ class CreateAnswerTool(BaseLLMTool):
                         "product_context": product_context,
                     }
                 )
-                return llm_result.content
+                answer = llm_result.content
+                logger.info(f"[CreateAnswerTool] Answer ({len(answer)} chars): '{answer[:200]}'")
+                return answer
             except Exception as error:
-                logging.error(f"Problem with generating an answer. Retry: {retry}/{self.MAX_RETRY}. Error msg: {error}")
+                logging.error(
+                    f"[CreateAnswerTool] LLM error on retry {retry}/{self.MAX_RETRY}. "
+                    f"{type(error).__name__}: {error}"
+                )
 
         error_msg = f"Unable to generate the answer. Total number of retries: {retry}"
-        logging.error(error_msg)
+        logging.error(f"[CreateAnswerTool] {error_msg}")
         raise Exception(error_msg)

@@ -33,18 +33,22 @@ const protectedLoginLoader = async () => {
     return redirect("/login");
   }
 
-  const apiDataSets = await api.dataSets().getDataSets();
-  if (!apiDataSets) {
-    return redirect("/login");
-  }
-
-  if (apiDataSets.length === 0) {
-    const accountData = await api.getAccount();
-    if (accountData.isStaff) {
-      return redirect("/onboarding");
-    } else {
-      return redirect("/no-data-sets");
+  try {
+    const apiDataSets = await api.dataSets().getDataSets();
+    if (!apiDataSets) {
+      return redirect("/login");
     }
+
+    if (apiDataSets.length === 0) {
+      const accountData = await api.getAccount();
+      if (accountData.isStaff) {
+        return redirect("/onboarding");
+      } else {
+        return redirect("/no-data-sets");
+      }
+    }
+  } catch {
+    return redirect("/login");
   }
 
   return null;

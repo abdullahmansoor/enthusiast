@@ -25,70 +25,28 @@ def evaluate_message_on_create(sender, instance, created, **kwargs):
     Automatically evaluate a message when it's created.
 
     Only evaluates assistant messages.
-    Runs asynchronously via Celery if ASYNC_EVALUATION is True.
-
-    Args:
-        sender: Message model
-        instance: Message instance
-        created: True if this is a new message
+    Also triggers session + daily rollup after every assistant reply.
     """
     if not created:
-        # Only evaluate new messages, not updates
         return
 
     if instance.role not in ('assistant', 'ai'):
-        # Only evaluate assistant responses
         return
 
-    # Trigger evaluation
+    conversation = instance.conversation
+
     if ASYNC_EVALUATION:
-        # Run in background via Celery
+        from analytics.tasks import rollup_daily_metrics_task
         evaluate_message_task.delay(instance.id, stage=3)
+        evaluate_conversation_task.apply_async(args=[conversation.id], countdown=2)
+        rollup_daily_metrics_task.apply_async(countdown=10)
     else:
-        # Run synchronously (for testing or debugging)
         from analytics.services import MetricsService
+        from datetime import date
         service = MetricsService()
         service.compute_turn_metrics(instance, stage=3)
-
-
-@receiver(post_save, sender=Conversation)
-def evaluate_conversation_on_update(sender, instance, created, **kwargs):
-    """
-    Trigger session-level evaluation periodically.
-
-    We evaluate after every N messages to avoid computing too frequently.
-
-    Args:
-        sender: Conversation model
-        instance: Conversation instance
-        created: True if this is a new conversation
-    """
-    if created:
-        # Don't evaluate empty conversations
-        return
-
-    # Get message count
-    message_count = instance.messages.count()
-
-    # Evaluate after every 2 messages (1 turn), or every 5 messages thereafter
-    should_evaluate = (
-        message_count >= 2 and
-        (message_count % 2 == 0 or message_count % 5 == 0)
-    )
-
-    if should_evaluate:
-        if ASYNC_EVALUATION:
-            # Run in background
-            evaluate_conversation_task.delay(instance.id)
-            from analytics.tasks import rollup_daily_metrics_task
-            rollup_daily_metrics_task.apply_async(countdown=5)
-        else:
-            # Run synchronously
-            from analytics.services import MetricsService
-            from datetime import date
-            service = MetricsService()
-            service.compute_session_metrics(instance)
-            service.rollup_daily_metrics(date.today())
+        service.compute_session_metrics(conversation)
+        service.rollup_daily_metrics(date.today())
 
 
 # Optional: Disconnect signals for testing
