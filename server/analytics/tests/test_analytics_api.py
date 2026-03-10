@@ -46,22 +46,29 @@ class AnalyticsAPITestCase(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-        # Create dataset
+        # Create dataset — user is a member, other_user is not
         self.dataset = DataSet.objects.create(
             name='Test Dataset'
         )
+        self.dataset.users.add(self.user)
 
-        # Create agent
+        # other_user has their own dataset
+        self.other_dataset = DataSet.objects.create(
+            name='Other Dataset'
+        )
+        self.other_dataset.users.add(self.other_user)
+
+        # Create agent (in user's dataset)
         self.agent = Agent.objects.create(
             name='Test Agent',
             dataset=self.dataset,
             created_by=self.user
         )
 
-        # Create other user's agent
+        # Create other user's agent (in other_user's dataset — not accessible to self.user)
         self.other_agent = Agent.objects.create(
             name='Other Agent',
-            dataset=self.dataset,
+            dataset=self.other_dataset,
             created_by=self.other_user
         )
 
@@ -320,11 +327,11 @@ class AnalyticsAPITestCase(TestCase):
 
     def test_conversation_detail_denies_other_user(self):
         """Test that conversation detail denies access to other user's conversations"""
-        # Create conversation for other user
+        # Create conversation for other user (in other_dataset — not accessible to self.user)
         other_conv = Conversation.objects.create(
             agent=self.other_agent,
             user=self.other_user,
-            data_set=self.dataset
+            data_set=self.other_dataset
         )
 
         response = self.client.get(

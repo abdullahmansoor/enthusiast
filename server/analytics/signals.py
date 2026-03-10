@@ -61,7 +61,6 @@ def disconnect_analytics_signals():
         disconnect_analytics_signals()
     """
     post_save.disconnect(evaluate_message_on_create, sender=Message)
-    post_save.disconnect(evaluate_conversation_on_update, sender=Conversation)
 
 
 def reconnect_analytics_signals():
@@ -73,4 +72,3 @@ def reconnect_analytics_signals():
         reconnect_analytics_signals()
     """
     post_save.connect(evaluate_message_on_create, sender=Message)
-    post_save.connect(evaluate_conversation_on_update, sender=Conversation)
